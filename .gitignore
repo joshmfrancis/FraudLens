@@ -1,11 +1,11 @@
-# Generated data (the README explains how to regenerate it)
-data/raw/
-data/processed/
-data/sparkov/
+# Generated data (the code README explains how to regenerate it)
+**/data/raw/
+**/data/processed/
+**/data/sparkov/
 
 # Intermediate pipeline files
-reports/cv_cache/
-reports/parts/
+**/reports/cv_cache/
+**/reports/parts/
 
 # Python
 __pycache__/
