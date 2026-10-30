@@ -1,0 +1,34 @@
+[
+ {
+  "name": "Coffee near home",
+  "amount": 6.5,
+  "score": 0.11725447793696266,
+  "verdict": "Looks normal",
+  "distance_mi": 0.0,
+  "driver": "Amount"
+ },
+ {
+  "name": "Gas on a road trip",
+  "amount": 48,
+  "score": 0.0005661243896208684,
+  "verdict": "Looks normal",
+  "distance_mi": 169.8,
+  "driver": "Recent activity"
+ },
+ {
+  "name": "Late-night electronics",
+  "amount": 890,
+  "score": 0.9787607032308271,
+  "verdict": "Likely fraud",
+  "distance_mi": 205.2,
+  "driver": "Amount"
+ },
+ {
+  "name": "Big evening purchase",
+  "amount": 520,
+  "score": 0.6934667373239951,
+  "verdict": "Worth a look",
+  "distance_mi": 0.0,
+  "driver": "Amount"
+ }
+]

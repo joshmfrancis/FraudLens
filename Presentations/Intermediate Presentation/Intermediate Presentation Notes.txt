@@ -1,0 +1,238 @@
+CREDIT CARD FRAUD DETECTION - INTERMEDIATE PRESENTATION NOTES
+Joshua Francis and Logan Digilormo
+
+==================================================
+PART 1: TALKING POINTS
+==================================================
+Speakers alternate each slide. Josh: 1, 3, 5, 7, 9, 11. Logan: 2, 4, 6, 8, 10, 12.
+
+--- SLIDE 1: TITLE (Josh) ---
+Hello everyone, I'm Josh, and this is Logan. Since the proposal we have
+generated the data, built the features, cross-validated and tested all
+four models, and explored the data with dimensionality reduction, so today
+we are presenting real results along with their limitations. Logan will
+begin with a brief recap.
+
+--- SLIDE 2: WHERE WE LEFT OFF (Logan) ---
+Thanks, Josh. In the proposal we set out to detect credit card fraud with
+classical machine learning. The data is simulated with the public Sparkov
+generator, so no private data is involved. We planned engineered features
+and four models, judged by precision, recall, F1, and PR-AUC instead of
+accuracy. Since then we added time-aware cross-validation and
+dimensionality reduction. Josh will show how much of the plan is complete.
+
+--- SLIDE 3: PROGRESS AGAINST OUR PROPOSAL (Josh) ---
+Here is our checklist against the proposal. We generated 822K transactions
+for 999 customers across 2025 and built 31 model inputs. We validated the
+models with five-fold, time-aware cross-validation on January to November
+and kept December as a final test. All four models are trained, and every
+one optimizes cross-entropy: logistic regression and gradient boosting
+minimize log loss, and the tree and forest split on entropy. We also added
+dimensionality reduction. The scoring demo and the final report are still
+ahead. Logan will walk through the data.
+
+--- SLIDE 4: DATA (Logan) ---
+The data has 822,484 transactions from 999 customers, with no duplicates
+or missing values. Fraud is 1.2% of transactions, about 9,500 cases. That
+is slightly above the "under one percent" we estimated in the proposal,
+and we are correcting that figure here. A model that always answers "not
+fraud" would be 98.8% accurate and catch nothing, which is why we do not
+rely on accuracy. Josh will describe the features we built.
+
+--- SLIDE 5: FEATURES (Josh) ---
+We built 31 model inputs in four groups. Base features are amount,
+customer age, and city size, plus fourteen merchant category columns. Time
+features are hour, weekday, weekend, and night. Distance is the haversine
+distance from home to the merchant. History features describe each
+customer's past, such as the amount compared with their average and
+purchases in the last hour. These use only earlier transactions, so
+nothing leaks from the future. Logan will explain how we reduced the
+dimensionality of these inputs.
+
+--- SLIDE 6: DIMENSIONALITY REDUCTION: PCA (Logan) ---
+With 31 inputs that overlap, we applied principal component analysis, or
+PCA, which rotates the data into new directions ordered by how much
+variation they carry. It takes 25 components to keep 95 percent of the
+variance, and the first two keep 17 percent. The first component mostly
+reflects recent activity, such as purchases in the last day, and the
+second mostly reflects amount. In the two-dimensional view, fraud overlaps
+normal activity heavily, so no simple projection separates it. Josh will
+show a nonlinear view and the effect of reduced inputs on the models.
+
+--- SLIDE 7: T-SNE AND PCA IN THE MODELS (Josh) ---
+To look for structure that PCA cannot show, we used t-SNE, a nonlinear
+method, on a balanced sample of 3,000 fraud and 3,000 normal transactions.
+Fraud forms local clusters: on average 84 percent of a fraud point's ten
+nearest neighbors are also fraud. We then trained the models on reduced
+inputs. PCA on only the 13 continuous features keeps most of the
+performance, with the random forest at 0.70 versus 0.76. PCA on all 31
+features drops it to 0.004, probably because the fraud signal sits in
+flags and categories that the rotation mixes. We have not tested that
+explanation. Logan will explain how we validated the models.
+
+--- SLIDE 8: TIME-AWARE CROSS-VALIDATION (Logan) ---
+We validated with time-aware cross-validation. The January to November
+development period is cut into six chunks. In each of five folds, the
+models train on the earlier chunks and validate on the next one, so they
+never see the future. We chose each model's settings by average PR-AUC
+across the folds and its decision threshold from the pooled validation
+predictions. Each model was then refit on the whole development period and
+tested once on December. The folds also show instability: the random
+forest averages 0.73 with a spread of 0.10, while gradient boosting's
+spread is 0.19. Josh will present the early results.
+
+--- SLIDE 9: EARLY MODEL RESULTS (Josh) ---
+Here are the four models on the held-out December test, beside their
+cross-validated PR-AUC. Logistic regression struggles, with an F1 of 0.04,
+because the fraud pattern is non-linear. The decision tree reaches 0.66,
+the random forest 0.72, and gradient boosting 0.30. Gradient boosting's
+low F1 comes from a threshold that was too strict after refitting, so its
+PR-AUC of 0.66 is the fairer figure. The random forest is best on both
+test and cross-validation. These are first-pass results with small tuning
+grids. Logan will cover the limitations.
+
+--- SLIDE 10: LIMITATIONS (Logan) ---
+We want to be clear about the limits. The data is simulated, so results
+may not transfer to real spending. Distance from home had no signal: its
+single-feature score is 0.50, a coin flip. Fraud also drifts, from 1.3% of
+transactions in January to November to 0.5% in the test month, and cross-
+validation scores vary by fold. Finally, tuning is limited to small grids
+and thresholds do not always transfer, so the numbers should improve. Josh
+will cover our scope and what has changed.
+
+--- SLIDE 11: SCOPE AND CHANGES SINCE PROPOSAL (Josh) ---
+Our title and topic are unchanged: detecting credit card fraud with
+machine learning. We want to state the changes since the proposal clearly.
+We now use four models instead of two, a time-aware split with five-fold
+cross-validation, and the public Sparkov generator for data. We also added
+dimensionality reduction with PCA and t-SNE. Finally, the distance finding
+shifts our emphasis toward amount, time, and customer history. Logan will
+close with next steps and who is doing what.
+
+--- SLIDE 12: NEXT STEPS AND WHO DOES WHAT (Logan) ---
+For next steps, Josh owns logistic regression and the decision tree, along
+with the feature pipeline and the ablation study. I own the random forest
+and gradient boosting, including deeper tuning and threshold choice.
+Together we will finish the scoring demo, the final deck, the report, and
+the GitHub repository. The final presentation is November 24th and 26th,
+and the report is due December 6th. Thank you, and we are happy to take
+questions.
+
+
+==================================================
+PART 2: QUESTIONS YOU MAY GET, WITH ANSWERS
+==================================================
+
+Q: Did your topic or title change?
+A: No. It is still credit card fraud detection. Since the proposal we
+   added two models (four total), time-aware cross-validation, a time-
+   based split, PCA and t-SNE, and we generate the data with the public
+   Sparkov tool.
+
+Q: How much fraud is in the data?
+A: 9,500 of 822,484 transactions, about 1.2%. Our proposal estimated under
+   1%; we corrected it after measuring.
+
+Q: What loss function do you use?
+A: Every model optimizes cross-entropy. Logistic regression minimizes
+   binary cross-entropy (log loss). Gradient boosting uses XGBoost's
+   binary:logistic objective, which is also log loss. The decision tree
+   and random forest choose splits with the entropy criterion (information
+   gain, which is built from cross-entropy), instead of the default Gini
+   impurity.
+
+Q: How did you use cross-validation?
+A: Time-aware, expanding-window cross-validation with 5 folds over January
+   to November. Each fold trains on earlier chunks and validates on the
+   next chunk, so the models never train on the future. Settings were
+   chosen by mean PR-AUC across folds, and December was held out until the
+   end. Random forest averaged 0.73 ± 0.10.
+
+Q: Why not ordinary shuffled k-fold?
+A: Shuffling mixes future transactions into training and inflates scores,
+   because history features and fraud patterns depend on time. Time-
+   ordered folds match how a real system is used.
+
+Q: What dimensionality reduction did you do?
+A: PCA on the 31 standardized inputs (it takes 25 components to keep 95%
+   of the variance), a t-SNE view of a balanced sample, and models trained
+   on reduced inputs. PCA on only the 13 continuous features kept most
+   performance (random forest 0.70 vs 0.76); PCA on all features collapsed
+   it (0.004).
+
+Q: Why did PCA on all features hurt so much?
+A: We observed it but did not isolate the cause. A likely reason is that
+   the fraud signal lives in flags and categories (such as the night flag)
+   that a rotation across all features mixes together. We treat that as a
+   hypothesis.
+
+Q: Which model is best?
+A: The random forest: test PR-AUC 0.76, F1 0.72, and the most stable
+   cross-validation (0.73 ± 0.10).
+
+Q: Why is gradient boosting's F1 so low?
+A: Its PR-AUC is 0.66, but the decision threshold chosen in cross-
+   validation (0.99) was too strict after the final refit, so it flags
+   only 99 fraud cases (F1 0.30). PR-AUC does not depend on a threshold,
+   so it is the fairer comparison.
+
+Q: Why is logistic regression so weak?
+A: PR-AUC 0.006. Fraud depends on combinations of amount, hour, and
+   customer history, which a straight-line model cannot express. It
+   remains a useful baseline.
+
+Q: Why didn't distance from home help?
+A: In this generated data, fraud is no farther from home than normal
+   purchases (medians 49.0 vs 48.9 miles; single-feature score 0.50). It
+   is a finding about the simulator, not about real fraud.
+
+Q: How do you avoid leakage?
+A: History features use only a customer's earlier transactions, folds are
+   time-ordered, and December was evaluated once.
+
+Q: Why does the test fraud rate differ?
+A: Fraud is 1.3% of transactions in January to November but 0.5% in
+   December. The generator does not spread fraud evenly across months. We
+   list it as a limitation.
+
+Q: Is any of this real data?
+A: No. It is simulated with the public Sparkov generator. No private or
+   personal data is used.
+
+Q: Who did what?
+A: Josh: logistic regression, decision tree, feature pipeline, ablation.
+   Logan: random forest, gradient boosting, tuning, thresholds. Together:
+   demo, decks, report, GitHub.
+
+Q: What is left?
+A: Deeper tuning, the full ablation write-up, the scoring demo, the final
+   deck (Nov 22), the report (Dec 6), and the GitHub repo.
+
+==================================================
+PART 3: DEFINITIONS
+==================================================
+
+Cross-entropy (log loss): The loss that penalizes confident wrong
+  probabilities; minimized by logistic regression and gradient boosting
+  here.
+Entropy split criterion: A tree chooses splits that most reduce entropy
+  (cross-entropy of the class mix); an alternative to Gini impurity.
+Cross-validation: Repeatedly training on one part of the data and
+  validating on another to estimate performance and pick settings.
+Time-aware (expanding-window) cross-validation: Folds that always train on
+  earlier data and validate on later data.
+PCA (principal component analysis): Rotates the data into uncorrelated
+  directions ordered by variance; keeping the first few reduces
+  dimensions.
+Explained variance: The share of the data's variation that a component
+  carries.
+t-SNE: A nonlinear method that places similar points near each other in
+  2D; used for visualization.
+PR-AUC: Area under the precision-recall curve; summarizes performance
+  across all thresholds for rare-class problems.
+Threshold: The score cutoff for flagging fraud, chosen from validation
+  predictions.
+Ablation: Re-training with groups of features removed to see which ones
+  help.
+Concept drift: When a pattern (here, the fraud rate) changes over time.
+

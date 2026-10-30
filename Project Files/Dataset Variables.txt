@@ -1,0 +1,93 @@
+SPARKOV GENERATED DATASET - VARIABLES (DATA DICTIONARY)
+Source: github.com/namebrandon/Sparkov_Data_Generation
+(datagen_customer.py and datagen_transaction.py)
+
+The output is one flat table with 26 columns: 16 customer fields and
+10 transaction fields. Files are pipe-separated ( | ).
+
+==================================================
+COLUMNS
+==================================================
+
+CUSTOMER FIELDS (16)
+
+ssn           Fake Social Security number
+              Use: DROP (identifier)
+cc_num        Fake credit card number
+              Use: DROP as a feature, but use as the customer key for
+                   history features
+first, last   Customer name
+              Use: DROP
+gender        M or F
+              Use: FEATURE
+street        Street address
+              Use: DROP
+city          Home city
+              Use: DROP
+state         Home state
+              Use: FEATURE
+zip           Home ZIP code
+              Use: DROP
+lat, long     Customer's home coordinates
+              Use: DISTANCE FEATURE (with merch_lat, merch_long)
+city_pop      Population of the home city
+              Use: FEATURE
+job           Job title
+              Use: DROP (too many unique values)
+dob           Date of birth (YYYY-MM-DD)
+              Use: DERIVE age at time of transaction
+acct_num      Account number
+              Use: DROP
+profile       The generator's spending-profile file for the customer
+              Use: DROP (generator setting, not real-world information)
+
+TRANSACTION FIELDS (10)
+
+trans_num     Transaction ID
+              Use: DROP
+trans_date    Date of purchase
+trans_time    Time of purchase
+              Use: DERIVE hour, weekday, weekend flag, ordering
+unix_time     Same timestamp as epoch seconds
+              Use: easier for sorting and time gaps between purchases
+category      Merchant category
+              Use: FEATURE (one-hot encode)
+amt           Transaction amount
+              Use: FEATURE
+is_fraud      Fraud flag
+              Use: LABEL
+merchant      Merchant name
+              Use: DROP (or merchant-level features)
+merch_lat     Merchant latitude
+merch_long    Merchant longitude
+              Use: DISTANCE FEATURE (with lat, long)
+
+==================================================
+NOTES
+==================================================
+
+1. Read the files with pandas using the pipe delimiter:
+     pd.read_csv(path, sep="|")
+
+2. Date and time are separate columns (trans_date, trans_time). Combine
+   them or use unix_time to get hour and weekday.
+
+3. Transaction output is chunked into multiple files per profile, and
+   some files may be empty. Concatenate them into one table.
+
+4. Distance feature: haversine distance between (lat, long) and
+   (merch_lat, merch_long). The generator places merchants randomly
+   around the customer's home: within about 1 degree (roughly 70 miles)
+   when not traveling, and a larger radius when traveling. Check how the
+   fraud profiles (profiles/fraud_*.json) set travel before presenting
+   results.
+
+5. Fraud rate: the generator gives nearly every customer a one-day fraud
+   window, so the fraud share depends on your date range and profiles.
+   It may not be under 1%. Measure it after generating the data and
+   update any "under 1%" statements in the deck, notes, and Q&A.
+
+6. Per-customer history features (amount vs. average, transactions in
+   the past hour/day, time and distance since the previous transaction)
+   are built by grouping on cc_num and sorting by unix_time. Use only
+   past transactions to avoid leakage.

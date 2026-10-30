@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FraudLens: credit card fraud detection demo</title>
+<meta name="description" content="Score a simulated credit card transaction with four classical machine learning models.">
+<style>
+:root{--bg:#fbfbfd;--alt:#f5f5f7;--surf:#fff;--text:#1d1d1f;--muted:#6e6e73;--line:rgba(0,0,0,.1);--blue:#0071e3;--green:#248a3d;--orange:#c93400;--red:#d70015;--shadow:0 10px 40px rgba(0,0,0,.08);--ease:cubic-bezier(.28,.11,.32,1)}
+[data-theme=dark]{--bg:#000;--alt:#161618;--surf:#1c1c1e;--text:#f5f5f7;--muted:#a1a1a6;--line:rgba(255,255,255,.16);--blue:#2997ff;--green:#30d158;--orange:#ff9f0a;--red:#ff453a;--shadow:0 10px 40px rgba(0,0,0,.5)}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:60px}
+body{margin:0;background:var(--bg);color:var(--text);font:17px/1.47 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Inter,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Inter,Arial,sans-serif;font-weight:600;letter-spacing:-.03em;margin:0}
+a{color:var(--blue);text-decoration:none}a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--blue);outline-offset:3px;border-radius:8px}
+nav{position:sticky;top:0;z-index:10;height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 max(20px,calc(50% - 490px));background:color-mix(in srgb,var(--bg) 72%,transparent);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid var(--line);font-size:13px}
+nav b{font-size:15px;letter-spacing:-.01em}nav .l{display:flex;gap:26px;align-items:center}nav .l a{color:var(--muted)}nav .l a:hover{color:var(--text);text-decoration:none}
+.ib{background:none;border:0;color:var(--muted);cursor:pointer;font-size:16px;min-width:44px;min-height:44px}
+.hero{position:relative;text-align:center;padding:110px 20px 90px;overflow:hidden}
+.hero:before{content:"";position:absolute;inset:-20% 10% auto;height:560px;background:radial-gradient(closest-side,rgba(0,113,227,.16),transparent),radial-gradient(closest-side at 70% 40%,rgba(255,59,48,.10),transparent);z-index:-1}
+.eyebrow{color:var(--muted);font-size:15px;font-weight:600;margin-bottom:14px}
+h1{font-size:clamp(44px,8vw,88px);line-height:1.05}h2{font-size:clamp(32px,5vw,56px);line-height:1.08}
+.sub{max-width:640px;margin:22px auto 34px;color:var(--muted);font-size:clamp(19px,2.4vw,24px);line-height:1.3}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 24px;border-radius:980px;border:0;background:var(--blue);color:#fff;font:inherit;font-size:17px;cursor:pointer;transition:transform .3s var(--ease),opacity .3s}
+.btn:hover{transform:scale(1.03);text-decoration:none}.btn:active{transform:scale(.98)}.btn[disabled]{opacity:.6}
+.link{margin-left:22px;font-size:17px}
+section{padding:100px 20px}section.alt{background:var(--alt)}.wrap{max-width:980px;margin:0 auto}.wide{max-width:1200px;margin:0 auto}
+.head{text-align:center;margin-bottom:48px}.head p{color:var(--muted);font-size:21px;max-width:620px;margin:14px auto 0;line-height:1.3}
+.card{background:var(--surf);border-radius:28px;box-shadow:var(--shadow);padding:32px}
+.studio{display:grid;grid-template-columns:1.1fr .9fr;gap:24px;align-items:start}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px}
+.chip{border:1px solid var(--line);background:var(--alt);color:var(--text);border-radius:980px;padding:8px 14px;font:inherit;font-size:14px;cursor:pointer;min-height:44px;transition:background .3s,border-color .3s}
+.chip:hover{border-color:var(--blue)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;font-weight:500}
+input,select{width:100%;min-height:44px;padding:0 14px;border-radius:14px;border:1px solid var(--line);background:var(--alt);color:var(--text);font:inherit;font-size:16px}
+input[type=range]{padding:0;accent-color:var(--blue);background:none;border:0}.full{grid-column:1/-1}
+details{margin:18px 0}summary{cursor:pointer;color:var(--blue);font-size:15px;min-height:44px;display:flex;align-items:center}
+.seg{display:flex;background:var(--alt);border-radius:12px;padding:3px;gap:2px;margin:6px 0 20px;flex-wrap:wrap}
+.seg input{position:absolute;opacity:0;width:0}.seg label{flex:1;margin:0;text-align:center;padding:9px 6px;border-radius:9px;font-size:13px;color:var(--text);cursor:pointer;transition:background .3s,box-shadow .3s;min-width:80px}
+.seg input:checked+label{background:var(--surf);box-shadow:0 1px 4px rgba(0,0,0,.2);font-weight:600}.seg input:focus-visible+label{outline:2px solid var(--blue)}
+.gauge{position:relative;width:200px;height:200px;margin:0 auto}.gauge svg{transform:rotate(-90deg)}
+.gauge .n{position:absolute;inset:0;display:grid;place-content:center;text-align:center}.gauge .n b{font-size:52px;letter-spacing:-.04em;line-height:1}.gauge .n span{font-size:13px;color:var(--muted)}
+.ring{transition:stroke-dashoffset .9s var(--ease),stroke .5s}
+.pill{display:inline-block;padding:6px 16px;border-radius:980px;font-weight:600;font-size:15px;color:#fff;transition:background .5s}
+.res{text-align:center}.res .meta{color:var(--muted);margin:10px 0 24px}
+.rows{text-align:left;margin-top:18px}.rows h3{font-size:15px;color:var(--muted);font-weight:600;letter-spacing:0;margin-bottom:8px}
+.r{display:grid;grid-template-columns:130px 1fr 52px;gap:10px;align-items:center;font-size:14px;min-height:30px}
+.bar{height:8px;border-radius:4px;background:var(--alt);overflow:hidden}.bar i{display:block;height:100%;border-radius:4px;background:var(--blue);width:0;transition:width .9s var(--ease)}
+.bar i.neg{background:var(--green)}.bar i.pos{background:var(--orange)}
+.fine{font-size:13px;color:var(--muted);margin-top:16px}#err{color:var(--red);font-size:14px;min-height:20px;margin-top:10px}
+.cards4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}.cards4 .card{padding:26px}.cards4 svg{width:34px;height:34px;stroke:var(--blue);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.cards4 h3{font-size:21px;margin:14px 0 6px}.cards4 p{margin:0;color:var(--muted);font-size:15px}
+.res2{display:grid;grid-template-columns:1.2fr 1fr;gap:24px}.res2 .card{padding:30px}.res2 h3{font-size:21px;margin-bottom:16px}
+.r2{grid-template-columns:150px 1fr 56px}
+.cm{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}.cm div{border-radius:16px;padding:16px;background:var(--alt);text-align:center}.cm b{display:block;font-size:28px;letter-spacing:-.03em}.cm span{font-size:13px;color:var(--muted)}
+.cm .ok b{color:var(--green)}.cm .bad b{color:var(--orange)}
+.trap{display:flex;gap:18px;align-items:center}.trap b{font-size:48px;letter-spacing:-.04em;color:var(--orange)}
+ul.lim{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:16px}ul.lim li{background:var(--surf);border-radius:20px;padding:22px;box-shadow:var(--shadow)}ul.lim b{display:block;margin-bottom:4px}ul.lim span{color:var(--muted);font-size:15px}
+footer{padding:40px 20px;text-align:center;color:var(--muted);font-size:13px;border-top:1px solid var(--line)}
+.rv{opacity:0;transform:translateY(24px);transition:opacity .8s var(--ease),transform .8s var(--ease)}.rv.in{opacity:1;transform:none}
+@media(max-width:1068px){.cards4{grid-template-columns:1fr 1fr}.studio,.res2{grid-template-columns:1fr}}
+@media(max-width:734px){section{padding:72px 16px}nav .l a{display:none}.grid,ul.lim,.cards4{grid-template-columns:1fr}.r,.r2{grid-template-columns:110px 1fr 48px}.card{padding:24px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}.rv{opacity:1;transform:none}html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<nav aria-label="Main"><b>FraudLens</b><div class="l"><a href="#try">Try it</a><a href="#how">How it works</a><a href="#results">Results</a><a href="#limits">Limits</a><button class="ib" id="theme" aria-label="Toggle dark mode">◐</button></div></nav>
+
+<header class="hero">
+  <p class="eyebrow">Classical machine learning on simulated data</p>
+  <h1>Spot fraud<br>before it spends.</h1>
+  <p class="sub">Four models read a purchase the way a careful bank would: the amount, the hour, and the customer’s own history.</p>
+  <a class="btn" href="#try">Try the demo</a><a class="link" href="#results">See the results ›</a>
+</header>
+
+<section id="try"><div class="wide">
+  <div class="head rv"><h2>Score a transaction.</h2><p>Pick a scenario or build your own. Every model weighs in.</p></div>
+  <div class="studio">
+    <form class="card rv" id="f" autocomplete="off">
+      <div class="chips" id="chips" role="group" aria-label="Scenarios"></div>
+      <div class="grid">
+        <div><label for="home">Home city</label><input id="home" list="cl" required value="Shreveport, LA"></div>
+        <div><label for="merch">Merchant city</label><input id="merch" list="cl" required value="Shreveport, LA"></div>
+        <div><label for="amt">Amount (USD)</label><input id="amt" type="number" min="1" max="25000" step="0.01" required value="6.5"></div>
+        <div><label for="cat">Category</label><select id="cat"></select></div>
+        <div class="full"><input id="amtr" type="range" min="1" max="2000" step="1" value="6" aria-label="Amount slider"></div>
+        <div><label for="when">Date and time</label><input id="when" type="datetime-local" required value="2025-12-10T09:00"></div>
+        <div><label for="age">Customer age</label><input id="age" type="number" min="16" max="100" value="34"></div>
+      </div>
+      <details><summary>Recent activity</summary><div class="grid">
+        <div><label for="avg">Typical amount (USD)</label><input id="avg" type="number" min="1" value="60"></div>
+        <div><label for="mins">Minutes since last purchase</label><input id="mins" type="number" min="0" value="300"></div>
+        <div><label for="n1">Purchases in last hour</label><input id="n1" type="number" min="0" value="0"></div>
+        <div><label for="n24">Purchases in last 24 hours</label><input id="n24" type="number" min="0" value="1"></div>
+      </div></details>
+      <label>Model</label>
+      <div class="seg" id="seg" role="radiogroup" aria-label="Model"></div>
+      <button class="btn" type="submit" id="go">Score transaction</button>
+      <div id="err" role="alert"></div>
+      <datalist id="cl"></datalist>
+    </form>
+    <div class="card res rv" aria-live="polite">
+      <div class="gauge"><svg width="200" height="200" viewBox="0 0 160 160" aria-hidden="true"><circle cx="80" cy="80" r="68" fill="none" stroke="var(--alt)" stroke-width="12"/><circle class="ring" id="ring" cx="80" cy="80" r="68" fill="none" stroke="var(--blue)" stroke-width="12" stroke-linecap="round" stroke-dasharray="427.26" stroke-dashoffset="427.26"/></svg><div class="n"><b id="sc">–</b><span>fraud score</span></div></div>
+      <p style="margin:18px 0 0"><span class="pill" id="vd" style="background:var(--muted)">Ready</span></p>
+      <p class="meta" id="meta">Choose a scenario to begin.</p>
+      <div class="rows"><h3>What moved the score</h3><div id="drv"></div></div>
+      <div class="rows"><h3>All models</h3><div id="all"></div></div>
+      <p class="fine">Demo on simulated data. Scores are model outputs, not calibrated probabilities. Not for real fraud decisions.</p>
+    </div>
+  </div>
+</div></section>
+
+<section id="how" class="alt"><div class="wide">
+  <div class="head rv"><h2>How it reads a purchase.</h2><p>Four families of signals, built from each customer’s past only.</p></div>
+  <div class="cards4">
+    <div class="card rv"><svg viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg><h3>Location</h3><p>Miles from the customer’s home to the merchant.</p></div>
+    <div class="card rv"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><h3>Time</h3><p>Hour, weekday, and whether it’s late at night.</p></div>
+    <div class="card rv"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg><h3>Behavior</h3><p>Amount compared with what this customer usually spends.</p></div>
+    <div class="card rv"><svg viewBox="0 0 24 24"><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8.5 18H14a3 3 0 0 0 0-6h-4a3 3 0 0 1 0-6h5.5"/></svg><h3>Movement</h3><p>Time and distance since the previous purchase.</p></div>
+  </div>
+</div></section>
+
+<section id="results"><div class="wide">
+  <div class="head rv"><h2>The results.</h2><p id="rsub">Evaluated once on a held-out test month.</p></div>
+  <div class="res2">
+    <div class="card rv"><h3>Model comparison</h3><div class="seg" id="mseg" role="radiogroup" aria-label="Metric"></div><div id="mbars"></div></div>
+    <div class="card rv"><h3 id="cmt">Best model</h3><div class="cm" id="cm"></div><p class="fine" id="cmn"></p></div>
+    <div class="card rv"><h3>What drives the score</h3><div id="imp"></div></div>
+    <div class="card rv"><h3>Do the features help?</h3><div id="abl"></div><p class="fine">PR-AUC for the best model with feature groups added.</p></div>
+    <div class="card rv" style="grid-column:1/-1"><h3>Seeing the data in two dimensions</h3><div class="grid"><figure style="margin:0"><img src="assets/pca_2d.png" alt="PCA projection: fraud and normal transactions overlap heavily in the first two components" style="width:100%;border-radius:16px" loading="lazy"><figcaption class="fine">PCA, first two components. Fraud overlaps normal activity.</figcaption></figure><figure style="margin:0"><img src="assets/tsne.png" alt="t-SNE embedding of a balanced sample: fraud forms local clusters" style="width:100%;border-radius:16px" loading="lazy"><figcaption class="fine">t-SNE on a balanced sample. Fraud forms local clusters.</figcaption></figure></div></div>
+    <div class="card rv" style="grid-column:1/-1"><div class="trap"><b id="trap">–</b><div><h3 style="margin:0 0 4px;font-size:21px">The accuracy trap</h3><span style="color:var(--muted)">A model that always answers “not fraud” scores this on our data and catches nothing. That’s why we report precision, recall, F1, and PR-AUC.</span></div></div></div>
+  </div>
+</div></section>
+
+<section id="limits" class="alt"><div class="wide">
+  <div class="head rv"><h2>Honest limits.</h2><p id="dsum"></p></div>
+  <ul class="lim">
+    <li class="rv"><b>Simulated data</b><span>Results may not transfer to real-world spending.</span></li>
+    <li class="rv"><b>Distance carries no signal</b><span>In this generated data, fraud is no farther from home than normal purchases.</span></li>
+    <li class="rv"><b>Fraud drifts over time</b><span>The fraud rate in the test month is lower than in training.</span></li>
+    <li class="rv"><b>Demo is not an evaluation</b><span>Scenario scores illustrate behavior; the results above are the evaluation.</span></li>
+  </ul>
+</div></section>
+
+<footer>Joshua Francis and Logan Digilormo · Graduate Machine Learning, LSU Shreveport · Data from the open-source Sparkov generator<br>Demo on simulated data. Not for real fraud decisions.</footer>
+
+<script>
+const $=s=>document.querySelector(s),M={logreg:"Logistic regression",tree:"Decision tree",rf:"Random forest",gb:"Gradient boosting"};
+const CATS={entertainment:"Entertainment",food_dining:"Food and dining",gas_transport:"Gas and transport",grocery_net:"Grocery (online)",grocery_pos:"Grocery (in store)",health_fitness:"Health and fitness",home:"Home",kids_pets:"Kids and pets",misc_net:"Misc (online)",misc_pos:"Misc (in store)",personal_care:"Personal care",shopping_net:"Shopping (online)",shopping_pos:"Shopping (in store)",travel:"Travel"};
+const FN={amt:"Amount",is_night:"Night hours",hour:"Hour of day",amt_ratio:"Amount vs average",amt_mean_past:"Typical amount",secs_since_prev:"Gap since last purchase",amt_z:"Amount z-score",age:"Customer age",dist_home_mi:"Distance from home",txn_24h:"Purchases in 24h",txn_1h:"Purchases in 1h",speed_mph:"Implied speed",dow:"Weekday",city_pop:"City size"};
+const PRE=[["Coffee near home",{merch:"Shreveport, LA",amt:6.5,cat:"food_dining",when:"2025-12-10T09:00",avg:60,mins:300,n1:0,n24:1}],
+["Gas on a road trip",{merch:"Dallas, TX",amt:48,cat:"gas_transport",when:"2025-12-10T17:00",avg:60,mins:300,n1:0,n24:1}],
+["Late-night electronics",{merch:"Houston, TX",amt:890,cat:"shopping_net",when:"2025-12-11T02:30",avg:55,mins:20,n1:2,n24:4}],
+["Big evening purchase",{merch:"Shreveport, LA",amt:520,cat:"shopping_pos",when:"2025-12-11T22:45",avg:60,mins:90,n1:1,n24:2}]];
+const html=(el,h)=>{el.innerHTML=h};let R,sel="rf",busy;
+$("#cat").innerHTML=Object.entries(CATS).map(([k,v])=>`<option value="${k}">${v}</option>`).join("");
+$("#chips").innerHTML=PRE.map((p,i)=>`<button type="button" class="chip" data-i="${i}">${p[0]}</button>`).join("");
+const setTheme=t=>{document.documentElement.dataset.theme=t;try{localStorage.setItem("fl-theme",t)}catch(e){}};
+let st;try{st=localStorage.getItem("fl-theme")}catch(e){}
+setTheme(st||(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light"));
+$("#theme").onclick=()=>setTheme(document.documentElement.dataset.theme==="dark"?"light":"dark");
+const radios=(el,name,items,cur,cb)=>{html(el,items.map(([k,v])=>`<input type="radio" name="${name}" id="${name}${k}" value="${k}" ${k===cur?"checked":""}><label for="${name}${k}">${v}</label>`).join(""));el.onchange=e=>cb(e.target.value)};
+const bars=(rows,fmt,cls)=>rows.map(([l,v,w,c])=>`<div class="r ${cls||""}"><span>${l}</span><div class="bar"><i class="${c||""}" data-w="${w}"></i></div><b>${fmt(v)}</b></div>`).join("");
+const grow=el=>requestAnimationFrame(()=>requestAnimationFrame(()=>el.querySelectorAll("i[data-w]").forEach(i=>i.style.width=i.dataset.w+"%")));
+const pct=x=>(x*100).toFixed(1)+"%",f2=x=>x.toFixed(2);
+function fill(o){for(const[k,v]of Object.entries(o))$("#"+k).value=v;$("#amtr").value=Math.min(o.amt,2000);}
+$("#amt").oninput=e=>$("#amtr").value=Math.min(e.target.value,2000);$("#amtr").oninput=e=>$("#amt").value=e.target.value;
+$("#chips").onclick=e=>{const b=e.target.closest(".chip");if(!b)return;fill(PRE[b.dataset.i][1]);$("#f").requestSubmit()};
+let tm;for(const id of["home","merch"])$("#"+id).oninput=e=>{clearTimeout(tm);tm=setTimeout(async()=>{const q=e.target.value;if(q.length<2)return;try{const r=await(await fetch("/api/cities?q="+encodeURIComponent(q))).json();html($("#cl"),r.map(c=>`<option value="${c}">`).join(""))}catch(_){}},150)};
+function show(j){const m=j.models[j.selected],s=m.score,col=m.verdict==="Likely fraud"?"var(--red)":m.verdict==="Worth a look"?"var(--orange)":"var(--green)";
+ $("#ring").style.strokeDashoffset=427.26*(1-s);$("#ring").style.stroke=col;$("#sc").textContent=Math.round(s*100);
+ const v=$("#vd");v.textContent=m.verdict;v.style.background=col;$("#meta").textContent=`${M[j.selected]} · ${j.distance_mi.toLocaleString()} miles from home`;
+ const mx=Math.max(.01,...j.drivers.map(d=>Math.abs(d.delta)));html($("#drv"),bars(j.drivers.map(d=>[d.label,d.delta,Math.abs(d.delta)/mx*100,d.delta>0?"pos":"neg"]),d=>(d>0?"+":"")+Math.round(d*100)));
+ html($("#all"),bars(Object.entries(j.models).map(([k,x])=>[M[k],x.score,x.score*100]),x=>Math.round(x*100)));grow($("#drv"));grow($("#all"));}
+$("#f").onsubmit=async e=>{e.preventDefault();if(busy)return;busy=1;$("#go").disabled=true;$("#err").textContent="";
+ const g=id=>$("#"+id).value;
+ try{const r=await fetch("/api/predict",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({home_city:g("home"),merchant_city:g("merch"),amount:+g("amt"),category:g("cat"),datetime:g("when"),age:+g("age"),avg_amount:+g("avg"),minutes_since_prev:+g("mins"),txn_1h:+g("n1"),txn_24h:+g("n24"),model:sel})});
+  const j=await r.json();if(!r.ok)throw new Error(typeof j.detail==="string"?j.detail:"Please check the inputs.");show(j)}
+ catch(x){$("#err").textContent=x.message}finally{busy=0;$("#go").disabled=false}};
+radios($("#seg"),"mdl",Object.entries(M),sel,v=>{sel=v;if($("#vd").textContent!=="Ready")$("#f").requestSubmit()});
+function results(){const D=R.dataset,ms=R.models,b=ms.find(m=>m.key===R.best_model);
+ const MET={pr_auc:"PR-AUC",f1:"F1",precision:"Precision",recall:"Recall",cv:"CV PR-AUC"};let cur="pr_auc";
+ const draw=()=>{const val=m=>cur==="cv"?m.cv.mean_pr_auc:m.test[cur];const mx=Math.max(...ms.map(val));html($("#mbars"),bars(ms.map(m=>[M[m.key],val(m),val(m)/Math.max(mx,.001)*100,m.key===R.best_model?"":"neg"]),f2,"r2").replace(/class="neg"/g,'class="" style="background:var(--muted)"'));grow($("#mbars"))};
+ radios($("#mseg"),"met",Object.entries(MET),cur,v=>{cur=v;draw()});draw();
+ const c=b.test.confusion;$("#cmt").textContent=M[b.key]+" on the test month";
+ html($("#cm"),`<div class="ok"><b>${c.tp}</b><span>Fraud caught</span></div><div class="bad"><b>${c.fp}</b><span>False alarms</span></div><div class="bad"><b>${c.fn}</b><span>Fraud missed</span></div><div class="ok"><b>${c.tn.toLocaleString()}</b><span>Normal, left alone</span></div>`);
+ $("#cmn").textContent=`Precision ${f2(b.test.precision)}, recall ${f2(b.test.recall)}, F1 ${f2(b.test.f1)} at a threshold chosen on validation data.`;
+ const im=R.importance.slice(0,7),im0=im[0].value;html($("#imp"),bars(im.map(i=>[FN[i.feature]||i.feature,i.value,i.value/im0*100]),x=>f2(x),"r2"));grow($("#imp"));
+ html($("#abl"),bars(R.ablation.map(a=>[a.name.split(":")[0]+": "+a.name.split(":")[1].trim().replace("all minus distance and speed","no distance"),a.pr_auc,a.pr_auc/Math.max(...R.ablation.map(z=>z.pr_auc))*100]),f2,"r2"));grow($("#abl"));
+ $("#trap").textContent=pct(D.dummy_accuracy);
+ $("#dsum").textContent=`${D.rows.toLocaleString()} simulated transactions · ${D.customers.toLocaleString()} customers · ${pct(D.fraud_rate)} fraud · ${D.date_start} to ${D.date_end}`;
+ $("#rsub").textContent=`Tuned with 5-fold time-aware cross-validation, then evaluated once on ${D.split.test.start} to ${D.split.test.end}.`;
+ sel=R.best_model;document.querySelector("#mdl"+sel).checked=true;}
+fetch("/api/results").then(r=>r.json()).then(j=>{R=j;results()}).catch(()=>{$("#rsub").textContent="Start the server to load results."});
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}}),{threshold:.12});
+document.querySelectorAll(".rv").forEach((e,i)=>{e.style.transitionDelay=(i%4)*70+"ms";io.observe(e)});
+</script>
+</body>
+</html>

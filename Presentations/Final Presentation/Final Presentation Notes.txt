@@ -1,0 +1,267 @@
+CREDIT CARD FRAUD DETECTION - FINAL PRESENTATION NOTES
+Joshua Francis and Logan Digilormo
+
+==================================================
+PART 1: TALKING POINTS
+==================================================
+Speakers alternate each slide. Josh: 1, 3, 5, 7, 9, 11, 13. Logan: 2, 4, 6, 8, 10, 12, 14.
+
+--- SLIDE 1: TITLE (Josh) ---
+Hello everyone, I'm Josh, and this is Logan. This is our final
+presentation on detecting credit card fraud with machine learning. We'll
+cover our data and features, dimensionality reduction with PCA and t-SNE,
+time-aware cross-validation, the final results, and a live demo of a
+scoring app we built. Logan will begin by recalling the problem.
+
+--- SLIDE 2: PROBLEM AND GOAL (Logan) ---
+Thanks, Josh. Our goal is to flag fraudulent credit card transactions from
+the amount, category, time, and a customer's own history. The challenge is
+that fraud is rare: 1.2% of our 822,484 simulated transactions, or roughly
+one in a hundred, as in this picture. A model therefore has to find a few
+needles in a large haystack, and plain accuracy would be misleading. Josh
+will describe the data and features.
+
+--- SLIDE 3: DATA AND FEATURES (Josh) ---
+We generated 822,484 transactions for 999 customers across 2025 with the
+public Sparkov tool, so no private data is involved. From the raw columns
+we built 31 model inputs in four groups: base details, time, distance from
+home, and customer history. The history features, such as the amount
+compared with a customer's average, use only that customer's earlier
+purchases, so nothing leaks from the future. Logan will show how we
+reduced the dimensionality of these inputs.
+
+--- SLIDE 4: DIMENSIONALITY REDUCTION: PCA (Logan) ---
+Our 31 inputs overlap a lot, so we applied principal component analysis,
+or PCA, which rotates the data into new directions ordered by how much
+variation they carry. It takes 25 of the 31 components to keep 95 percent
+of the variance, and the first two keep 17 percent. The first component
+mostly reflects recent activity, such as purchases in the last day, and
+the second mostly reflects amount. In the two-dimensional view, fraud
+overlaps normal activity heavily, so no simple projection separates it.
+Josh will show a nonlinear view and what happens when models use the
+reduced inputs.
+
+--- SLIDE 5: T-SNE AND PCA IN THE MODELS (Josh) ---
+To look for structure that PCA can't show, we used t-SNE, a nonlinear
+method, on a balanced sample of 3,000 fraud and 3,000 normal transactions.
+Fraud forms local clusters: on average 84 percent of a fraud point's ten
+nearest neighbors are also fraud. We then trained the models on reduced
+inputs. Applying PCA to only the 13 continuous features keeps most of the
+performance, with the random forest at 0.70 versus 0.76. Applying PCA to
+all 31 features collapses it to 0.00, because the fraud signal sits in
+flags and categories that the rotation scrambles. We did not test that
+explanation separately. Logan will explain how we validated the models.
+
+--- SLIDE 6: METHODS AND CROSS-VALIDATION (Logan) ---
+We used time-aware cross-validation. The January to November development
+period is cut into six chunks, and in each of five folds the models train
+on the earlier chunks and validate on the next one, so they never see the
+future. We picked each model's settings by average PR-AUC across the
+folds, and chose its decision threshold from the pooled validation
+predictions. Then each model was refit on the whole development period and
+tested once on December. All four models optimize cross-entropy: logistic
+regression and gradient boosting minimize log loss directly, and the tree
+and forest split on entropy. The folds also show how unstable some models
+are: the random forest averages 0.73 with a spread of 0.10, while gradient
+boosting's spread is 0.19. Josh will compare the results.
+
+--- SLIDE 7: MODEL COMPARISON (Josh) ---
+Here are all four models on the test month, next to their cross-validated
+scores. The random forest is best on both: a test PR-AUC of 0.76, an F1 of
+0.72, and a cross-validated PR-AUC of 0.73 with a spread of 0.10. The
+decision tree reaches 0.69, and gradient boosting 0.66, although its F1 is
+only 0.30 because the threshold chosen in cross-validation was too strict
+for the refit model, so PR-AUC is the fairer comparison. Logistic
+regression fails, with a PR-AUC of 0.006, because fraud depends on
+combinations of features that a straight-line model cannot express. Logan
+will look closer at the best model.
+
+--- SLIDE 8: BEST MODEL IN DETAIL (Logan) ---
+On the test month, the random forest caught 373 of 571 fraud cases and
+raised 85 false alarms among about 122,802 normal transactions. That's a
+precision of 0.81 and recall of 0.65 at a threshold of 0.88. The threshold
+matters a lot: at the default of 0.5, its F1 would drop to 0.36. The curve
+shows the trade-off between catching more fraud and raising more false
+alarms. Josh will explain what drives these predictions.
+
+--- SLIDE 9: WHAT DRIVES FRAUD (Josh) ---
+This chart shows which features the random forest relies on most, measured
+by how much performance drops when we shuffle each one. Amount is the
+clear leader, followed by the night flag and the hour of day. Amount
+compared to the customer's own average also ranks high, which is one of
+our history features. Distance from home does not appear, which matches
+what we saw in the data. Logan will test whether the feature groups really
+help.
+
+--- SLIDE 10: DO OUR FEATURES HELP (Logan) ---
+We tested this with an ablation, retraining the random forest on different
+feature groups and scoring each on the test month. A base model with
+amount, time, and category scores a PR-AUC of 0.57. Adding the history
+features lifts it to 0.77, a large gain. Adding distance does not help:
+0.52. Removing distance and speed from the full set changes nothing
+meaningful, 0.76 versus 0.76. So the history features earned their place,
+while distance did not in this data. Josh will show the demo.
+
+--- SLIDE 11: LIVE DEMO (Josh) ---
+We built a small web app that scores a transaction with all four models. A
+coffee near home scores 12 out of 100 and looks normal. An 890 dollar
+online purchase at two thirty in the morning scores 98 and is flagged as
+likely fraud, driven mostly by amount and time of day. A large evening
+purchase near home scores 69, which the app labels worth a look. The app
+also shows what moved each score. I will now run it live. Logan will cover
+the limitations.
+
+--- SLIDE 12: LIMITATIONS AND LESSONS (Logan) ---
+We want to be clear about the limits and lessons. The data is simulated,
+so results may not transfer to real spending. Distance from home carried
+no signal in this generator. Fraud also drifts over time: 1.3% of January
+to November transactions were fraud, but only 0.5% in the test month, and
+cross-validation scores varied across folds. The main lessons were that
+accuracy is a trap, that thresholds do not always transfer, and that
+features must use only the past. Josh will summarize the conclusions.
+
+--- SLIDE 13: CONCLUSIONS AND FUTURE WORK (Josh) ---
+We have three main findings. First, the random forest was our best model,
+with a test F1 of 0.72, a test PR-AUC of 0.76, and the most stable cross-
+validation scores. Second, customer-history features mattered most,
+lifting PR-AUC from 0.57 to 0.77. Third, dimensionality reduction helped
+us understand the data but not the models: PCA on the continuous features
+kept most of the performance, and PCA on everything did not. Distance from
+home, our original idea, did not help in this simulated data. For future
+work we would try real data with permission, cost-based thresholds, and
+generator settings where travel matters. Logan will close.
+
+--- SLIDE 14: THANK YOU AND QUESTIONS (Logan) ---
+Thanks, Josh. To recap who did what: Josh built the logistic regression
+and decision tree, the feature pipeline, and the ablation. I built the
+random forest and gradient boosting and handled tuning and thresholds. We
+built the demo, the decks, and the report together, and all the code is in
+our GitHub repository. Thank you, and we are happy to take questions.
+
+Demo script (slide 11): start the server (uvicorn app.server:app --port 8000), open http://localhost:8000, click 'Late-night electronics', then 'Coffee near home'. Point at the gauge, the 'What moved the score' bars, and the 'All models' rows. Toggle dark mode.
+
+
+==================================================
+PART 2: QUESTIONS YOU MAY GET, WITH ANSWERS
+==================================================
+
+Q: What loss function do you use?
+A: Every model optimizes cross-entropy. Logistic regression minimizes
+   binary cross-entropy (log loss). Gradient boosting uses XGBoost's
+   binary:logistic objective, which is also log loss. The decision tree
+   and random forest choose splits with the entropy criterion (information
+   gain, which is built from cross-entropy), instead of the default Gini
+   impurity.
+
+Q: How did you use cross-validation?
+A: Time-aware, expanding-window cross-validation with 5 folds over January
+   to November. Each fold trains on earlier chunks and validates on the
+   next chunk, so the models never train on the future. Settings were
+   chosen by mean PR-AUC across folds, and December was held out until the
+   end. Random forest averaged 0.73 ± 0.10.
+
+Q: Why not ordinary shuffled k-fold?
+A: Shuffling mixes future transactions into training and inflates scores,
+   because history features and fraud patterns depend on time. Time-
+   ordered folds match how a real system is used.
+
+Q: What dimensionality reduction did you do?
+A: PCA on the 31 standardized inputs (it takes 25 components to keep 95%
+   of the variance), a t-SNE view of a balanced sample, and models trained
+   on reduced inputs. PCA on only the 13 continuous features kept most
+   performance (random forest 0.70 vs 0.76); PCA on all features collapsed
+   it (0.004).
+
+Q: Why did PCA on all features hurt so much?
+A: We observed it but did not isolate the cause. A likely reason is that
+   the fraud signal lives in flags and categories (such as the night flag)
+   that a rotation across all features mixes together. We treat that as a
+   hypothesis.
+
+Q: What does t-SNE show?
+A: On a balanced sample of 3,000 fraud and 3,000 normal transactions,
+   fraud forms local clusters: 84% of a fraud point's 10 nearest neighbors
+   are also fraud. t-SNE is for visualization only, so we did not train on
+   it.
+
+Q: Which model is best?
+A: The random forest: test PR-AUC 0.76, F1 0.72, and the most stable
+   cross-validation (0.73 ± 0.10).
+
+Q: How did you pick the threshold?
+A: From the pooled validation predictions in cross-validation, choosing
+   the cutoff that maximizes F1. For the random forest it is 0.88; at the
+   default 0.5, its test F1 would be 0.36.
+
+Q: Why is gradient boosting's F1 so low?
+A: Its PR-AUC is 0.66, but the decision threshold chosen in cross-
+   validation (0.99) was too strict after the final refit, so it flags
+   only 99 fraud cases (F1 0.30). PR-AUC does not depend on a threshold,
+   so it is the fairer comparison.
+
+Q: Why is logistic regression so weak?
+A: PR-AUC 0.006. Fraud depends on combinations of amount, hour, and
+   customer history, which a straight-line model cannot express. It
+   remains a useful baseline.
+
+Q: Why didn't distance from home help?
+A: In this generated data, fraud is no farther from home than normal
+   purchases (medians 49.0 vs 48.9 miles; single-feature score 0.50). It
+   is a finding about the simulator, not about real fraud.
+
+Q: How do you avoid leakage?
+A: History features use only a customer's earlier transactions, folds are
+   time-ordered, and December was evaluated once.
+
+Q: Why does the test fraud rate differ?
+A: Fraud is 1.3% of transactions in January to November but 0.5% in
+   December. The generator does not spread fraud evenly across months. We
+   list it as a limitation.
+
+Q: Is any of this real data?
+A: No. It is simulated with the public Sparkov generator. No private or
+   personal data is used.
+
+Q: Who did what?
+A: Josh: logistic regression, decision tree, feature pipeline, ablation.
+   Logan: random forest, gradient boosting, tuning, thresholds. Together:
+   demo, decks, report, GitHub.
+
+Q: How does the demo score a transaction?
+A: The server builds the same features used in training, runs all four
+   saved models, and reports each score. 'What moved the score' replaces
+   one feature group with a neutral value and shows how much the score
+   changes. Scores are model outputs, not calibrated probabilities.
+
+Q: What would you do with more time?
+A: Real data with permission, cost-based thresholds, SMOTE, and generator
+   settings where travel matters.
+
+==================================================
+PART 3: DEFINITIONS
+==================================================
+
+Cross-entropy (log loss): The loss that penalizes confident wrong
+  probabilities; minimized by logistic regression and gradient boosting
+  here.
+Entropy split criterion: A tree chooses splits that most reduce entropy
+  (cross-entropy of the class mix); an alternative to Gini impurity.
+Cross-validation: Repeatedly training on one part of the data and
+  validating on another to estimate performance and pick settings.
+Time-aware (expanding-window) cross-validation: Folds that always train on
+  earlier data and validate on later data.
+PCA (principal component analysis): Rotates the data into uncorrelated
+  directions ordered by variance; keeping the first few reduces
+  dimensions.
+Explained variance: The share of the data's variation that a component
+  carries.
+t-SNE: A nonlinear method that places similar points near each other in
+  2D; used for visualization.
+PR-AUC: Area under the precision-recall curve; summarizes performance
+  across all thresholds for rare-class problems.
+Threshold: The score cutoff for flagging fraud, chosen from validation
+  predictions.
+Ablation: Re-training with groups of features removed to see which ones
+  help.
+Concept drift: When a pattern (here, the fraud rate) changes over time.
+

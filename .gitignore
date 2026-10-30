@@ -1,0 +1,24 @@
+# Generated data (the README explains how to regenerate it)
+data/raw/
+data/processed/
+data/sparkov/
+
+# Intermediate pipeline files
+reports/cv_cache/
+reports/parts/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# Editors
+.idea/
+.vscode/
+
+# OS files (Mac and Windows)
+.DS_Store
+Thumbs.db
+Desktop.ini

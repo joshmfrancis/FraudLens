@@ -1,2 +1,8 @@
-# Auto detect text files and perform LF normalization
+# Normalize line endings across Windows and Mac, and never touch binary files
 * text=auto
+*.sh text eol=lf
+*.joblib binary
+*.png binary
+*.pptx binary
+*.parquet binary
+*.zip binary

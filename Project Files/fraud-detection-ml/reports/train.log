@@ -1,0 +1,16 @@
+{"train": {"rows": 575738, "fraud": 7254, "fraud_rate": 0.012599481013933421, "start": "2025-01-01", "end": "2025-10-02"}, "val": {"rows": 123373, "fraud": 1675, "fraud_rate": 0.013576714516142105, "start": "2025-10-02", "end": "2025-11-30"}, "test": {"rows": 123373, "fraud": 571, "fraud_rate": 0.004628241187293817, "start": "2025-11-30", "end": "2025-12-31"}}
+== Logistic regression
+  test: P=0.003 R=0.736 F1=0.007 PR-AUC=0.003 thr=0.831 fit=2s
+== Decision tree
+  Decision tree {'max_depth': 4, 'min_samples_leaf': 50} val PR-AUC=0.5806 (1s)
+  Decision tree {'max_depth': 4, 'min_samples_leaf': 200} val PR-AUC=0.6333 (1s)
+  Decision tree {'max_depth': 6, 'min_samples_leaf': 50} val PR-AUC=0.6845 (2s)
+  Decision tree {'max_depth': 6, 'min_samples_leaf': 200} val PR-AUC=0.7098 (2s)
+  Decision tree {'max_depth': 8, 'min_samples_leaf': 50} val PR-AUC=0.7401 (2s)
+  Decision tree {'max_depth': 8, 'min_samples_leaf': 200} val PR-AUC=0.7091 (2s)
+  Decision tree {'max_depth': 12, 'min_samples_leaf': 50} val PR-AUC=0.7621 (3s)
+  Decision tree {'max_depth': 12, 'min_samples_leaf': 200} val PR-AUC=0.7090 (2s)
+  test: P=0.579 R=0.660 F1=0.617 PR-AUC=0.624 thr=0.985 fit=11s
+== Random forest
+  Random forest {'max_depth': 10, 'min_samples_leaf': 10} val PR-AUC=0.7637 (6s)
+  Random forest {'max_depth': 10, 'min_samples_leaf': 40} val PR-AUC=0.7478 (6s)
