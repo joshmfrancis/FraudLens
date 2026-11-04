@@ -1,4 +1,4 @@
-"""FastAPI backend: scores a transaction with the four trained models. Run: uvicorn app.server:app"""
+"""FastAPI backend: scores a transaction with the eight trained models. Run: uvicorn app.server:app"""
 import json, sys, datetime as dt
 from pathlib import Path
 import numpy as np, joblib
@@ -8,12 +8,13 @@ from pydantic import BaseModel, Field
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 from fraud.features import GROUPS, CATS, haversine_mi
+from fraud.common import KEYS  # importing common also registers xgboost/lightgbm so the saved models can be loaded
 
 ALL = GROUPS["base"] + GROUPS["time"] + GROUPS["distance"] + GROUPS["history"] + ["cat_" + c for c in CATS]
 IDX = {c: i for i, c in enumerate(ALL)}
 RESULTS = json.loads((ROOT / "reports/results.json").read_text())
 CITIES = json.loads((ROOT / "app/cities.json").read_text()); BY_NAME = {c["name"].lower(): c for c in CITIES}
-MODELS = {k: joblib.load(ROOT / f"models/{k}.joblib") for k in ["logreg", "tree", "rf", "gb"]}
+MODELS = {k: joblib.load(ROOT / f"models/{k}.joblib") for k in KEYS}
 INFO = {m["key"]: m for m in RESULTS["models"]}
 app = FastAPI(title="FraudLens")
 

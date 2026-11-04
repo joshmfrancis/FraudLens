@@ -1,0 +1,19 @@
+# environments
+.venv/
+venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.DS_Store
+Thumbs.db
+# generated data (rebuild with run_all.py)
+data/raw/
+data/processed/
+data/sparkov/
+# caches and logs
+**/cv_cache/
+**/parts/
+*.log
+# deck build output and node packages
+**/out/
+**/node_modules/

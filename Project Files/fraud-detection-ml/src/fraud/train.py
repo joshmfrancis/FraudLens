@@ -22,13 +22,13 @@ def evaluate(m, Xe, ye, thr, cols=None):
             "pr_auc": float(average_precision_score(ye, p)), "log_loss": float(log_loss(ye, np.clip(p, 1e-6, 1 - 1e-6))), "roc_auc": float(roc_auc_score(ye, p)), "accuracy": float((pred == ye).mean()),
             "confusion": {"tp": int(tp), "fp": int(fp), "fn": int(fn), "tn": int(tn)}}, {"precision": [round(v, 4) for v in pint], "recall": [round(v, 2) for v in grid]}
 os.makedirs("reports/parts", exist_ok=True); os.makedirs("models", exist_ok=True); results = []
-for key in ["logreg", "tree", "rf", "gb"]:
+for key in KEYS:
     pf = f"reports/parts/{key}.json"
     if os.path.exists(pf): results.append(json.load(open(pf))); log("cached", key); continue
     c = cv["models"][key]; t = time.time(); m = make_model(key, spw=spw, **c["best_params"]); m.fit(Xd, yd); secs = time.time() - t
     tm, curve = evaluate(m, Xt, yt, c["threshold"]); tm5, _ = evaluate(m, Xt, yt, 0.5)
     train_ap = float(average_precision_score(yd[::4], m.predict_proba(Xd[::4])[:, 1]))
-    r = {"key": key, "name": NAMES[key], "loss": {"logreg": "binary cross-entropy (log loss)", "gb": "binary cross-entropy (binary:logistic)", "tree": "entropy split criterion (cross-entropy)", "rf": "entropy split criterion (cross-entropy)"}[key], "params": c["best_params"], "threshold": c["threshold"], "test": tm,
+    r = {"key": key, "name": NAMES[key], "owner": OWNER[key], "loss": LOSS[key], "params": c["best_params"], "threshold": c["threshold"], "test": tm,
          "test_at_0.5": {k: tm5[k] for k in ["precision", "recall", "f1"]}, "train_pr_auc": train_ap, "train_seconds": round(secs, 1), "pr_curve": curve,
          "cv": {"folds_pr_auc": c["folds_pr_auc"], "mean_pr_auc": c["mean_pr_auc"], "std_pr_auc": c["std_pr_auc"], "folds_f1": c["folds_f1"], "mean_f1": c["mean_f1"], "std_f1": c["std_f1"]}}
     log(f"{key}: CV PR-AUC {c['mean_pr_auc']:.3f}+/-{c['std_pr_auc']:.3f} | test P={tm['precision']:.3f} R={tm['recall']:.3f} F1={tm['f1']:.3f} PR-AUC={tm['pr_auc']:.3f} ({secs:.0f}s)")

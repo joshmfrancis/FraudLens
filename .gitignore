@@ -1,24 +1,19 @@
-# Generated data (the code README explains how to regenerate it)
-**/data/raw/
-**/data/processed/
-**/data/sparkov/
-
-# Intermediate pipeline files
-**/reports/cv_cache/
-**/reports/parts/
-
-# Python
-__pycache__/
-*.pyc
+# environments
 .venv/
 venv/
+__pycache__/
+*.pyc
 .ipynb_checkpoints/
-
-# Editors
-.idea/
-.vscode/
-
-# OS files (Mac and Windows)
 .DS_Store
 Thumbs.db
-Desktop.ini
+# generated data (rebuild with run_all.py)
+data/raw/
+data/processed/
+data/sparkov/
+# caches and logs
+**/cv_cache/
+**/parts/
+*.log
+# deck build output and node packages
+**/out/
+**/node_modules/

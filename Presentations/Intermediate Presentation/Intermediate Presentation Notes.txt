@@ -1,0 +1,326 @@
+CREDIT CARD FRAUD DETECTION - INTERMEDIATE PRESENTATION NOTES
+Joshua Francis and Logan Digilormo
+
+==================================================
+PART 1: TALKING POINTS
+==================================================
+Speakers alternate each slide. Josh: 1, 3, 5, 7, 9, 11. Logan: 2, 4, 6, 8, 10, 12.
+
+--- SLIDE 1: FRAUD DETECTION: INTERMEDIATE UPDATE (Josh) ---
+Hello everyone, I'm Josh, and this is Logan. Since the proposal we have
+generated the data, built the features, trained all eight models with
+time-aware cross-validation, and explored the data with dimensionality
+reduction, so today we are presenting real results along with their
+limitations. Logan will begin with a brief recap.
+
+--- SLIDE 2: WHERE WE LEFT OFF (Logan) ---
+Thanks, Josh. In the proposal we set out to detect credit card fraud
+with classical machine learning. The data is simulated with the public
+Sparkov generator, so no private data is involved. We planned engineered
+features and now eight models, judged by F1 and PR-AUC instead of
+accuracy. Since then we added time-aware cross-validation and
+dimensionality reduction with SVD and t-SNE. Josh will show how much of
+the plan is complete.
+
+--- SLIDE 3: PROGRESS AGAINST OUR PROPOSAL (Josh) ---
+Here is our checklist against the proposal. We generated 877K
+transactions for 998 customers across 2025 and built 31 model inputs. We
+validated the models with five-fold, time-aware cross-validation on
+January to November and kept December as a final test. All eight models
+are trained and scored with both F1 and PR-AUC. Wherever a model has a
+loss function it is cross-entropy: logistic regression, XGBoost, and
+LightGBM minimize log loss, and the tree, forest, and extra trees split
+on entropy. The linear SVM uses hinge loss and is then calibrated with
+log loss, and Naive Bayes has no loss at all. We also added
+dimensionality reduction. The scoring demo and the final report are
+still ahead. Logan will walk through the data.
+
+--- SLIDE 4: DATA: GENERATED AND VALIDATED (Logan) ---
+The data has 877,369 transactions from 998 customers, with no repeated
+rows or missing values. Fraud is 1.1% of transactions, about 9,377
+cases, so fraud is rare. A model that always answers "not fraud" would
+be 98.9% accurate and catch nothing, which is why we do not rely on
+accuracy. Josh will describe the features we built.
+
+--- SLIDE 5: FEATURES BUILT SO FAR (Josh) ---
+We built 31 model inputs in four groups. Base features are amount,
+customer age, and city size, plus fourteen merchant category columns.
+Time features are hour, weekday, weekend, and night. Distance is the
+haversine distance from home to the merchant. History features describe
+each customer's past, such as the amount compared with their average and
+purchases in the last hour. These use only earlier transactions, so
+nothing leaks from the future. Logan will explain how we reduced the
+dimensionality of these inputs.
+
+--- SLIDE 6: DIMENSIONALITY REDUCTION: SVD (Logan) ---
+With 31 inputs that overlap, we applied singular value decomposition, or
+SVD, which rewrites the data as new directions ordered by how much of it
+they capture. We scale each column but do not center it. Centering first
+would turn SVD into PCA, which is a special case of SVD, and it would
+need 25 components for 95 percent. Uncentered SVD needs 22 components,
+and the first two capture 60 percent. The first component is dominated
+by overall level, mainly the customer's typical amount, and the second
+by amount compared with that typical amount. In the two-dimensional
+view, fraud overlaps normal activity heavily, so no simple projection
+separates it. Josh will show a nonlinear view and the effect of reduced
+inputs on the models.
+
+--- SLIDE 7: T-SNE AND SVD IN THE MODELS (Josh) ---
+To look for structure that SVD cannot show, we used t-SNE, a nonlinear
+method, on a balanced sample of 3,000 fraud and 3,000 normal
+transactions. Fraud forms local clusters: on average 85 percent of a
+fraud point's ten nearest neighbors are also fraud. We then trained all
+eight models on reduced inputs. SVD on only the 13 continuous features,
+with flags and categories kept, helps the models that work well on the
+full data: the random forest scores 0.68 versus 0.77, and LightGBM 0.68
+versus 0.73. Others lose more, such as extra trees and XGBoost. SVD on
+all 31 features drops every model to near zero, 0.006 for the forest,
+probably because the fraud signal sits in flags and categories that the
+rotation mixes. We have not tested that explanation. Logan will explain
+how we validated the models.
+
+--- SLIDE 8: TIME-AWARE CROSS-VALIDATION (Logan) ---
+We validated with time-aware cross-validation. The January to November
+development period is cut into six chunks. In each of five folds, the
+models train on the earlier chunks and validate on the next one, so they
+never see the future. We chose each model's settings by average PR-AUC
+across the folds and its decision threshold from the pooled validation
+predictions, and we record F1 in every fold as well. Each model was then
+refit on the whole development period and tested once on December. The
+folds also show instability: the random forest averages 0.71 with a
+spread of 0.08, while the decision tree has a spread of 0.32. Josh will
+present the early results.
+
+--- SLIDE 9: EARLY MODEL RESULTS (Josh) ---
+Here are all eight models on the held-out December test, beside their
+cross-validated scores. The two linear models, logistic regression and
+the linear SVM, fail: their test PR-AUC is 0.005 and 0.009, because the
+fraud pattern is non-linear. Naive Bayes is stable but weak at 0.15. The
+tree-based models do the real work. The random forest has the best
+cross-validated PR-AUC at 0.71 and the best test F1 at 0.72, with a test
+PR-AUC of 0.77. The decision tree matches it on the test month, 0.77,
+but its folds swing from 0.06 to 0.79. XGBoost and LightGBM have low F1,
+0.30 and 0.19, because their thresholds were too strict after refitting,
+so their PR-AUC of 0.63 and 0.73 is the fairer figure. These are first-
+pass results with small tuning grids. Logan will cover the limitations.
+
+--- SLIDE 10: LIMITATIONS (Logan) ---
+We want to be clear about the limits. The data is simulated, so results
+may not transfer to real spending. Distance from home had no signal: its
+single-feature score is 0.50, a coin flip. Fraud also drifts, from 1.2%
+of transactions in January to November to 0.5% in the test month, and
+cross-validation scores vary by fold. Finally, tuning is limited to
+small grids and thresholds do not always transfer, so the numbers should
+improve. Josh will cover our scope and what has changed.
+
+--- SLIDE 11: SCOPE AND CHANGES SINCE PROPOSAL (Josh) ---
+Our title and topic are unchanged: detecting credit card fraud with
+machine learning. We want to state the changes since the proposal
+clearly. We now use eight models instead of two, a time-aware split with
+five-fold cross-validation, and the public Sparkov generator for data.
+We also added dimensionality reduction with SVD and t-SNE, and we report
+both F1 and PR-AUC. Finally, the distance finding shifts our emphasis
+toward amount, time, and customer history. Logan will close with next
+steps and who is doing what.
+
+--- SLIDE 12: NEXT STEPS AND WHO DOES WHAT (Logan) ---
+For next steps, Josh owns logistic regression, the decision tree, the
+random forest, and extra trees, along with the feature pipeline and the
+ablation study. I own XGBoost, LightGBM, the calibrated linear SVM, and
+Naive Bayes, including deeper tuning and threshold choice. Together we
+will finish the scoring demo, the final deck, the report, and the GitHub
+repository. The final presentation is November 24th and 26th, and the
+report is due December 6th. Thank you, and we are happy to take
+questions.
+
+
+==================================================
+PART 2: QUESTIONS YOU MAY GET, WITH ANSWERS
+==================================================
+
+Q: What loss function do you use?
+A: Wherever a model has a loss, it is cross-entropy. Logistic regression
+   minimizes binary cross-entropy (log loss). XGBoost and LightGBM use
+   the binary logistic objective, which is also log loss. The decision
+   tree, random forest, and extra trees choose splits with the entropy
+   criterion, built from cross-entropy, instead of Gini. The linear SVM
+   trains on hinge loss, which is a margin loss, so we then calibrate it
+   with log loss (Platt scaling). Naive Bayes has no loss: it is fit by
+   maximum likelihood.
+
+Q: How did you use cross-validation?
+A: Time-aware, expanding-window cross-validation with 5 folds over January
+   to November. Each fold trains on earlier chunks and validates on the
+   next chunk, so the models never train on the future. Settings were
+   chosen by mean PR-AUC across folds, thresholds from the pooled
+   validation predictions, and December was held out until the end. We
+   also record F1 for every fold. Random forest averaged PR-AUC 0.71 +/-
+   0.08 and F1 0.66.
+
+Q: Why not ordinary shuffled k-fold?
+A: Shuffling mixes future transactions into training and inflates scores,
+   because history features and fraud patterns depend on time. Time-
+   ordered folds match how a real system is used.
+
+Q: Why report both F1 and PR-AUC?
+A: F1 depends on a threshold, and PR-AUC does not. F1 shows how the model
+   behaves at the cutoff we would actually use; PR-AUC compares the
+   models' ranking of transactions independent of that cutoff. When they
+   disagree, as with LightGBM, the gap tells us the threshold did not
+   transfer.
+
+Q: What is SVD, and how is it different from PCA?
+A: SVD rewrites the data table as new directions ordered by how much of the
+   data they capture. PCA is SVD after centering each column. We scale
+   columns but do not center them, so the first direction mostly
+   reflects overall level. It takes 22 of 31 components to keep 95% of
+   the energy, versus 25 for PCA.
+
+Q: What did you find with dimensionality reduction?
+A: SVD on all features collapses every model (forest 0.006 versus 0.77).
+   SVD on only the 13 continuous features, keeping flags and categories,
+   keeps most performance for the forest (0.68) and LightGBM (0.68) but
+   hurts extra trees (0.17 versus 0.47). t-SNE shows fraud forms local
+   clusters: 85% of a fraud point's 10 nearest neighbors are fraud.
+
+Q: Why did SVD on all features hurt so much?
+A: We observed it but did not isolate the cause. A likely reason is that
+   the fraud signal lives in flags and categories (such as the night
+   flag) that a rotation across all features mixes together. We treat
+   that as a hypothesis.
+
+Q: Which model is best?
+A: By cross-validation, the random forest: PR-AUC 0.71 +/- 0.08. On the
+   test month it has PR-AUC 0.77 and the best F1, 0.72. The decision
+   tree ties it on test PR-AUC (0.77), but its validation folds range
+   from 0.06 to 0.79.
+
+Q: Why are XGBoost's and LightGBM's F1 scores low?
+A: Their PR-AUC is 0.63 and 0.73, but the thresholds chosen in cross-
+   validation (0.99 and 1.00) were too strict after the final refit, so
+   they flag few fraud cases (F1 0.30 and 0.19). PR-AUC does not depend
+   on a threshold, so it is the fairer comparison.
+
+Q: Why do logistic regression and the linear SVM fail?
+A: Test PR-AUC is 0.005 and 0.009. Fraud depends on combinations of amount,
+   hour, and customer history, which a straight-line boundary cannot
+   express. The SVM's cross-validation is also unstable (0.40 +/- 0.29).
+   They remain useful baselines.
+
+Q: Why is Naive Bayes weak but stable?
+A: Its cross-validated PR-AUC is 0.30 +/- 0.04, the smallest spread of any
+   model, because it has almost nothing to tune. But it assumes features
+   are independent, which they are not (amount and amount-versus-
+   average, for example), so it is capped at a low score (0.15 on test).
+
+Q: Why didn't distance from home help?
+A: In this generated data, fraud is no farther from home than normal
+   purchases (medians 49.1 vs 48.9 miles; single-feature ROC-AUC 0.50).
+   It is a finding about the simulator, not about real fraud.
+
+Q: How do you avoid leakage?
+A: History features use only a customer's earlier transactions, folds are
+   time-ordered, and December was evaluated once.
+
+Q: Why does the test fraud rate differ?
+A: Fraud is 1.2% of transactions in January to November but 0.5% in
+   December. The generator does not spread fraud evenly across months.
+   We list it as a limitation.
+
+Q: How much fraud is in the data?
+A: 9,377 of 877,369 transactions, 1.1%, across 998 customers. Always
+   guessing 'not fraud' would be 98.9% accurate.
+
+Q: Some transaction numbers repeat. Is the data duplicated?
+A: No. No full row is repeated. The generator's seed makes some transaction
+   ID strings repeat across different customers, and we never use that
+   column as a feature.
+
+Q: Is any of this real data?
+A: No. It is simulated with the public Sparkov generator. No private or
+   personal data is used.
+
+Q: Is this deep learning?
+A: No. All eight models are classical machine learning.
+
+Q: Who did what?
+A: Josh: logistic regression, decision tree, random forest, extra trees,
+   plus the feature pipeline and ablation. Logan: XGBoost, LightGBM,
+   calibrated linear SVM, Naive Bayes, plus tuning and thresholds for
+   them. Together: demo, decks, report, GitHub.
+
+Q: What is left?
+A: Deeper tuning, the full ablation write-up, the scoring demo, the final
+   deck (Nov 22), the report (Dec 6), and the GitHub repo.
+
+
+==================================================
+PART 3: DEFINITIONS
+==================================================
+
+Cross-entropy (log loss): The loss that penalizes confident wrong
+  probabilities. Logistic regression, XGBoost, and LightGBM minimize it
+  directly.
+Entropy split criterion: A tree chooses the split that most reduces
+  entropy (the cross-entropy of the class mix), instead of the default
+  Gini impurity. Used by our tree, forest, and extra trees.
+Hinge loss: A margin loss used by support vector machines. It is not
+  cross-entropy, so we calibrate the SVM's scores with log loss
+  afterward.
+Probability calibration (Platt scaling): Fitting a small logistic curve
+  that turns a model's raw scores into probabilities, by minimizing log
+  loss.
+Maximum likelihood: Choosing parameters that make the training data most
+  probable. Naive Bayes is fit this way and has no separate loss
+  function.
+Logistic regression: A model that learns one weight per feature and
+  outputs a probability.
+Decision tree: A flowchart of yes/no questions that ends in a
+  prediction.
+Random forest: Many decision trees, each trained on a random slice of
+  the data, that vote.
+Extra trees (extremely randomized trees): Like a random forest, but
+  split points are chosen more randomly, which adds variety between
+  trees.
+Gradient boosting / XGBoost: Trees built one after another, each
+  correcting the previous ones' mistakes. XGBoost is a popular, fast
+  implementation.
+LightGBM: Another boosting implementation. It grows trees leaf by leaf,
+  which is fast but can overfit with large trees, so we keep ours small.
+Linear SVM (support vector machine): Finds the straight-line boundary
+  with the widest margin between the classes. Fast, but it cannot
+  express non-linear patterns.
+Naive Bayes: Applies Bayes' rule while assuming features are
+  independent. Very fast and stable, but the independence assumption is
+  wrong here.
+SVD (singular value decomposition): Rewrites a data table as new
+  directions ordered by how much of the data they capture. We keep the
+  first few to reduce dimensions.
+PCA (principal component analysis): SVD applied after subtracting each
+  column's mean (centering). We use uncentered SVD, so the first
+  direction mostly reflects overall level.
+Energy (explained variance): The share of the data that a component
+  captures. For uncentered SVD it is the squared singular value divided
+  by the sum of all of them.
+t-SNE: A nonlinear method that places similar points near each other in
+  2D, used only for visualization.
+Cross-validation: Repeatedly training on one part of the data and
+  validating on another to estimate performance and choose settings.
+Time-aware (expanding-window) cross-validation: Folds that always train
+  on earlier data and validate on later data, so a model never sees the
+  future.
+F1 score: One number balancing precision and recall at a chosen
+  threshold.
+PR-AUC: Area under the precision-recall curve. It summarizes performance
+  across all thresholds and suits rare-class problems.
+Precision / recall: Precision: of the transactions we flag, how many are
+  fraud. Recall: of all fraud, how much we catch.
+Threshold: The score cutoff for flagging fraud, chosen from the pooled
+  validation predictions.
+Class weights: A multiplier that makes mistakes on the rare class
+  (fraud) count more during training.
+Ablation: Re-training with groups of features removed or added to see
+  which ones help.
+Concept drift: When a pattern, here the fraud rate, changes over time.
+Data leakage: When a model gets information it would not have in real
+  life, such as future transactions.

@@ -1,5 +1,6 @@
 const pptxgen = require("pptxgenjs");
-const { applyTheme } = require("/mnt/skills/public/pptx/scripts/apply_theme.js");
+let applyTheme = async () => {}; try { applyTheme = require("/mnt/skills/public/pptx/scripts/apply_theme.js").applyTheme; } catch (e) {} // optional: only used to polish the theme XML
+const path = require("path"), OUT = path.join(__dirname, "out"); require("fs").mkdirSync(OUT, { recursive: true });
 const React = require("react");
 const ReactDOMServer = require("react-dom/server");
 const sharp = require("sharp");
@@ -101,7 +102,7 @@ async function icon(Comp, color = "#FFFFFF") {
     });
   }
   text(s, "Illustration: 1 fraud in every 100 transactions", { x: 8.0, y: 6.3, w: 4.7, h: 0.35, fontSize: 12, color: C.accent5, objectName: "Dot caption" });
-  s.addNotes("LOGAN: Thanks, Josh. Our goal is to predict whether a credit card transaction is fraud, based on things like the amount, category, time, and location. A big signal is where the purchase happened. If it's far from the cardholder's home, or just out of pattern for that person, it looks suspicious. The challenge is that fraud is a tiny fraction of all transactions. On this slide, one dot in a hundred is fraud, and in our generated data it's about 1.2 in a hundred, so the model has to find a few needles in a very large haystack. Josh will tell you where our data comes from.");
+  s.addNotes("LOGAN: Thanks, Josh. Our goal is to predict whether a credit card transaction is fraud, based on things like the amount, category, time, and location. A big signal is where the purchase happened. If it's far from the cardholder's home, or just out of pattern for that person, it looks suspicious. The challenge is that fraud is a tiny fraction of all transactions. On this slide, one dot in a hundred is fraud, and in our generated data it's about 1.1 in a hundred, so the model has to find a few needles in a very large haystack. Josh will tell you where our data comes from.");
 
   // ---------- 3. data ----------
   s = pres.addSlide({ masterName: "CONTENT", sectionTitle: SEC });
@@ -141,48 +142,52 @@ async function icon(Comp, color = "#FFFFFF") {
 
   // ---------- 5. methods ----------
   s = pres.addSlide({ masterName: "CONTENT", sectionTitle: SEC });
-  s.addText("Four models, compared fairly", { placeholder: "title" });
+  s.addText("Eight models, compared fairly", { placeholder: "title" });
   const models = [
-    [fa.FaChartLine, "Logistic regression", "Baseline", "Learns a weight per feature and outputs a fraud probability. Simple and explainable."],
-    [fa.FaSitemap, "Decision tree", "Single tree", "One flowchart of yes/no questions. Easy to read, but can overfit on its own."],
-    [fa.FaTree, "Random forest", "Ensemble", "Hundreds of trees vote. Captures non-linear patterns and reports feature importance."],
-    [fa.FaRocket, "Gradient boosting", "Boosting", "Trees built in sequence, each fixing the last one's mistakes. Often strongest on tables."],
+    [fa.FaChartLine, "Logistic regression", "Josh", "Baseline. One weight per feature, trained on log loss."],
+    [fa.FaSitemap, "Decision tree", "Josh", "One flowchart of yes/no questions. Easy to read."],
+    [fa.FaTree, "Random forest", "Josh", "Many trees vote. Captures non-linear patterns."],
+    [fa.FaRandom, "Extra trees", "Josh", "Like a forest, with more randomly chosen splits."],
+    [fa.FaRocket, "XGBoost", "Logan", "Gradient boosting: each tree fixes the last one's errors."],
+    [fa.FaBolt, "LightGBM", "Logan", "A faster boosting method that grows trees leaf by leaf."],
+    [fa.FaVectorSquare, "Linear SVM", "Logan", "Draws a margin between classes; calibrated to give probabilities."],
+    [fa.FaCalculator, "Naive Bayes", "Logan", "Fast baseline: Bayes' rule on independent features."],
   ];
-  for (let i = 0; i < 4; i++) {
-    const x = 0.7 + i * 3.033, [Ic, h, tag, b] = models[i];
-    card(s, x, 1.7, 2.8, 3.3, "Model card " + (i + 1));
-    await circleIcon(s, Ic, x + 0.3, 2.0, 0.7, "Model " + h);
-    s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: x + 1.15, y: 2.17, w: 1.4, h: 0.36, rectRadius: 0.18, fill: { color: C.accent1 }, line: { color: C.accent1, width: 0 }, objectName: "Model tag " + (i + 1) });
-    text(s, tag, { x: x + 1.15, y: 2.17, w: 1.4, h: 0.36, fontSize: 12, bold: true, color: C.background1, align: "center", valign: "middle", objectName: "Model tag text " + (i + 1) });
-    text(s, h, { x: x + 0.3, y: 3.0, w: 2.3, h: 0.4, fontSize: 17, bold: true, objectName: "Model header " + (i + 1) });
-    text(s, b, { x: x + 0.3, y: 3.5, w: 2.3, h: 1.4, fontSize: 14, objectName: "Model text " + (i + 1) });
+  for (let i = 0; i < 8; i++) {
+    const x = 0.7 + (i % 4) * 3.0375, y = 1.5 + Math.floor(i / 4) * 1.9, [Ic, h, who, b] = models[i];
+    card(s, x, y, 2.79, 1.75, "Model card " + (i + 1));
+    await circleIcon(s, Ic, x + 0.2, y + 0.18, 0.5, "Model " + h);
+    s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: x + 1.75, y: y + 0.25, w: 0.85, h: 0.32, rectRadius: 0.16, fill: { color: who === "Josh" ? C.accent1 : C.accent5 }, line: { color: who === "Josh" ? C.accent1 : C.accent5, width: 0 }, objectName: "Owner tag " + (i + 1) });
+    text(s, who, { x: x + 1.75, y: y + 0.25, w: 0.85, h: 0.32, fontSize: 11, bold: true, color: C.background1, align: "center", valign: "middle", objectName: "Owner tag text " + (i + 1) });
+    text(s, h, { x: x + 0.2, y: y + 0.8, w: 2.4, h: 0.32, fontSize: 16, bold: true, objectName: "Model header " + (i + 1) });
+    text(s, b, { x: x + 0.2, y: y + 1.12, w: 2.4, h: 0.55, fontSize: 12, objectName: "Model text " + (i + 1) });
   }
-  card(s, 0.7, 5.3, 11.9, 1.3, "Imbalance strip");
-  await circleIcon(s, fa.FaBalanceScale, 1.0, 5.55, 0.8, "Imbalance", C.accent3, "#17252A");
+  card(s, 0.7, 5.4, 11.9, 1.3, "Imbalance strip");
+  await circleIcon(s, fa.FaBalanceScale, 1.0, 5.65, 0.8, "Imbalance", C.accent3, "#17252A");
   text(s, [
-    { text: "Handling imbalance: ", options: { bold: true } },
-    { text: "class weights tell every model that missing a fraud costs more than a false alarm. Built with Python, pandas, scikit-learn, and XGBoost or LightGBM." },
-  ], { x: 2.1, y: 5.55, w: 10.2, h: 0.8, fontSize: 16, valign: "middle", objectName: "Imbalance text" });
-  s.addNotes("JOSH: Thanks, Logan. We're comparing four models, from simple to powerful. Logistic regression is our baseline. It learns a weight for each feature and outputs a fraud probability. A decision tree is a single flowchart of yes/no questions, which is easy to read but can overfit. A random forest combines hundreds of trees that vote, which captures non-linear patterns and shows which features matter most. And gradient boosting builds trees one after another, each fixing the last one's mistakes, and it's often the strongest on tables like ours. To deal with the imbalance, we'll use class weights, so every model treats a missed fraud as more costly than a false alarm. We'll build everything in Python with scikit-learn and XGBoost or LightGBM. Logan will explain how we measure the results.");
+    { text: "Imbalance and loss: ", options: { bold: true } },
+    { text: "class weights make a missed fraud cost more than a false alarm. Wherever a model has a loss, it is cross-entropy. Josh owns the first four models, Logan the last four." },
+  ], { x: 2.1, y: 5.65, w: 10.2, h: 0.8, fontSize: 16, valign: "middle", objectName: "Imbalance text" });
+  s.addNotes("JOSH: Thanks, Logan. We're comparing eight models, from simple to powerful, and we split them between us. I take four: logistic regression, our baseline, which learns one weight per feature; a decision tree, a single flowchart of yes/no questions; a random forest, where many trees vote; and extra trees, which is like a forest with more randomly chosen splits. Logan takes the other four: XGBoost, which builds trees one after another, each fixing the last one's mistakes; LightGBM, a faster boosting method; a linear support vector machine, calibrated so it outputs probabilities; and Naive Bayes, a fast probabilistic baseline. To deal with the imbalance, we use class weights, and wherever a model has a loss function, it is cross-entropy. We'll build everything in Python with scikit-learn, XGBoost, and LightGBM. Logan will explain how we measure the results.");
 
   // ---------- 6. metrics ----------
   s = pres.addSlide({ masterName: "CONTENT", sectionTitle: SEC });
   s.addText("Accuracy would mislead us", { placeholder: "title" });
   card(s, 0.7, 1.7, 4.6, 4.6, "Accuracy trap card", C.text1);
-  text(s, "98.8%", { x: 1.1, y: 2.2, w: 3.8, h: 1.3, fontSize: 66, bold: true, color: C.accent3, objectName: "Accuracy stat" });
-  text(s, "accuracy from predicting \"not fraud\" every time, when fraud is about 1.2% of transactions. It catches zero fraud.", { x: 1.1, y: 3.7, w: 3.8, h: 2.2, fontSize: 16, color: C.background1, objectName: "Accuracy caption" });
+  text(s, "98.9%", { x: 1.1, y: 2.2, w: 3.8, h: 1.3, fontSize: 66, bold: true, color: C.accent3, objectName: "Accuracy stat" });
+  text(s, "accuracy from predicting \"not fraud\" every time, when fraud is about 1.1% of transactions. It catches zero fraud.", { x: 1.1, y: 3.7, w: 3.8, h: 2.2, fontSize: 16, color: C.background1, objectName: "Accuracy caption" });
   const mets = [
-    ["Precision", "Of the transactions we flag, how many are really fraud."],
-    ["Recall", "Of all real fraud, how much we catch."],
-    ["F1 score", "One number balancing precision and recall. Our main comparison metric."],
+    ["Precision and recall", "Of the transactions we flag, how many are fraud; of all fraud, how much we catch."],
+    ["F1 score", "One number balancing precision and recall, at a chosen decision threshold."],
+    ["PR-AUC", "Area under the precision-recall curve. Needs no threshold, so it is the fairest way to compare models on rare fraud."],
   ];
   mets.forEach(([h, b], i) => {
     const y = 1.7 + i * 1.6;
     card(s, 5.6, y, 7.0, 1.4, "Metric card " + (i + 1));
-    text(s, h, { x: 6.0, y: y + 0.25, w: 6.2, h: 0.4, fontSize: 20, bold: true, color: C.accent1, objectName: "Metric header " + (i + 1) });
-    text(s, b, { x: 6.0, y: y + 0.7, w: 6.2, h: 0.6, fontSize: 16, objectName: "Metric text " + (i + 1) });
+    text(s, h, { x: 6.0, y: y + 0.2, w: 6.2, h: 0.4, fontSize: 20, bold: true, color: C.accent1, objectName: "Metric header " + (i + 1) });
+    text(s, b, { x: 6.0, y: y + 0.65, w: 6.2, h: 0.7, fontSize: 15, objectName: "Metric text " + (i + 1) });
   });
-  s.addNotes("LOGAN: We can't use accuracy here. Fraud is only about 1.2% of our transactions, so a model that says \"not fraud\" every single time is 98.8% accurate and catches nothing. So we'll use precision, which is how many flagged transactions are really fraud, and recall, which is how much of the real fraud we catch. F1 combines the two, and that will be our main number for comparing models. Josh will walk through the plan.");
+  s.addNotes("LOGAN: We can't use accuracy here. Fraud is only about 1.1% of our transactions, so a model that says \"not fraud\" every single time is 98.9% accurate and catches nothing. Instead we report precision, which is how many flagged transactions are really fraud, and recall, which is how much of the real fraud we catch. F1 combines those two at a chosen threshold. We also report PR-AUC, the area under the precision-recall curve, which does not depend on a threshold, so it is the fairest way to compare models. Josh will walk through the plan.");
 
   // ---------- 7. plan ----------
   s = pres.addSlide({ masterName: "CONTENT", sectionTitle: SEC });
@@ -191,9 +196,9 @@ async function icon(Comp, color = "#FFFFFF") {
     ["Generate data", "Run the Sparkov generator for customers, merchants, and a date range, then load it into pandas."],
     ["Preprocess", "Drop identifiers (name, street, card number), parse timestamps, one-hot encode categories, and scale inputs for logistic regression."],
     ["Engineer features", "Build distance, time, and per-customer history features using only past transactions."],
-    ["Split by time", "Train on earlier transactions and test on later ones, as a real fraud system would."],
-    ["Train and compare", "Logistic regression baseline versus decision tree, random forest, and gradient boosting, all with class weights, tuned on a validation set."],
-    ["Evaluate and demo", "Report precision, recall, and F1, plus feature importance, then score hand-built normal and suspicious transactions."],
+    ["Time-aware split", "Hold out the last month for testing, and tune with time-aware cross-validation: always train on earlier data, validate on later."],
+    ["Reduce and train", "Reduce dimensions with SVD and t-SNE, then train and compare all eight models, all with class weights."],
+    ["Evaluate and demo", "Report F1 and PR-AUC, plus feature importance, then score hand-built normal and suspicious transactions."],
   ];
   steps.forEach(([h, b], i) => {
     const y = 1.6 + i * 0.86;
@@ -203,7 +208,7 @@ async function icon(Comp, color = "#FFFFFF") {
     text(s, h, { x: 1.7, y, w: 2.8, h: 0.72, fontSize: 18, bold: true, valign: "middle", objectName: "Step title " + (i + 1) });
     text(s, b, { x: 4.6, y, w: 7.8, h: 0.72, fontSize: 14, valign: "middle", objectName: "Step text " + (i + 1) });
   });
-  s.addNotes("JOSH: Here's the plan from start to finish. First, we generate the data and load it into pandas. Second, we preprocess it: drop identifiers like name, street, and card number, parse timestamps, one-hot encode categories, and scale inputs for logistic regression. Third, we engineer the features Logan described. Fourth, we split by time, training on earlier transactions and testing on later ones, like a real fraud system would. Fifth, we train and compare all four models and tune them on a validation set. And last, we evaluate with our metrics and run a demo on hand-built transactions.");
+  s.addNotes("JOSH: Here's the plan from start to finish. First, we generate the data and load it into pandas. Second, we preprocess it: drop identifiers like name, street, and card number, parse timestamps, one-hot encode categories, and scale inputs for logistic regression. Third, we engineer the features Logan described. Fourth, we split by time: we hold out the last month for testing and tune with time-aware cross-validation, which always trains on earlier data and validates on later data, like a real fraud system would. Fifth, we reduce dimensions with SVD and t-SNE, then train and compare all eight models. And last, we evaluate with F1 and PR-AUC and run a demo on hand-built transactions.");
 
   // ---------- 8. related work ----------
   s = pres.addSlide({ masterName: "CONTENT", sectionTitle: SEC });
@@ -216,16 +221,16 @@ async function icon(Comp, color = "#FFFFFF") {
   text(s, "github.com/sharmasapna/credit-card-fraud-detection", { x: 1.1, y: 5.55, w: 5.0, h: 0.4, fontSize: 11, color: C.accent1, objectName: "Existing link" });
   card(s, 6.8, 1.7, 5.8, 4.6, "Our focus card", C.accent1);
   text(s, "Our focus", { x: 7.2, y: 2.1, w: 5.0, h: 0.5, fontSize: 24, bold: true, color: C.background1, objectName: "Focus title" });
-  const focus = ["Distance-from-home feature", "Per-customer behavior features", "Time-based train and test split", "Precision, recall, and F1 for four models", "A scoring demo on hand-built transactions"];
+  const focus = ["Distance-from-home feature", "Per-customer behavior features", "Time-aware cross-validation", "F1 and PR-AUC for eight models", "SVD and t-SNE dimensionality reduction"];
   text(s, focus.map((t, i) => ({ text: t, options: { bullet: true, breakLine: i < focus.length - 1, paraSpaceAfter: 10 } })),
     { x: 7.2, y: 2.9, w: 5.0, h: 3.0, fontSize: 16, color: C.background1, objectName: "Focus list" });
-  s.addNotes("LOGAN: There's an existing project on GitHub by sharmasapna that also classifies fraud on Sparkov data, about 1.3 million transactions across 1,000 customers and 800 merchants. Our focus is a bit different: the distance-from-home feature, per-customer behavior features, a time-based split, a four-model comparison with precision, recall, and F1, and a scoring demo.\n\nSource: https://github.com/sharmasapna/credit-card-fraud-detection");
+  s.addNotes("LOGAN: There's an existing project on GitHub by sharmasapna that also classifies fraud on Sparkov data, about 1.3 million transactions across 1,000 customers and 800 merchants. Our focus is a bit different: the distance-from-home feature, per-customer behavior features, time-aware cross-validation, an eight-model comparison with F1 and PR-AUC, and dimensionality reduction with SVD and t-SNE.\n\nSource: https://github.com/sharmasapna/credit-card-fraud-detection");
 
   // ---------- 9. outcomes ----------
   s = pres.addSlide({ masterName: "CONTENT", sectionTitle: SEC });
   s.addText("What we expect to deliver", { placeholder: "title" });
   const outs = [
-    [fa.FaChartLine, "Beat the baseline", "Random forest and gradient boosting improve recall and F1 over logistic regression."],
+    [fa.FaChartLine, "Beat the baseline", "Tree ensembles and boosting improve F1 and PR-AUC over logistic regression."],
     [fa.FaSortAmountDown, "Useful features", "Distance and behavior features rank high in feature importance."],
     [fa.FaPlayCircle, "A working demo", "A trained model that scores hand-built normal and suspicious transactions."],
   ];
@@ -242,7 +247,7 @@ async function icon(Comp, color = "#FFFFFF") {
     { text: "Known limitation: ", options: { bold: true } },
     { text: "the data is simulated, so results may not transfer directly to real-world spending." },
   ], { x: 2.1, y: 5.25, w: 10.2, h: 0.8, fontSize: 16, valign: "middle", objectName: "Limitation text" });
-  s.addNotes("JOSH: We expect the random forest and gradient boosting to beat the logistic regression baseline on recall and F1. We also expect the distance and behavior features to rank high in feature importance. And we'll end with a working demo that scores normal and suspicious hand-built transactions. One limitation is that the data is simulated, so results may not transfer directly to real-world spending. Logan will close with the timeline.");
+  s.addNotes("JOSH: We expect the tree ensembles and boosted models to beat the logistic regression baseline on F1 and PR-AUC. We also expect the distance and behavior features to rank high in feature importance. And we'll end with a working demo that scores normal and suspicious hand-built transactions. One limitation is that the data is simulated, so results may not transfer directly to real-world spending. Logan will close with the timeline.");
 
   // ---------- 10. timeline ----------
   s = pres.addSlide({ masterName: "CONTENT", sectionTitle: SEC });
@@ -251,7 +256,7 @@ async function icon(Comp, color = "#FFFFFF") {
   const miles = [
     ["Oct 20 & 22", "Proposal", "Idea, methods, metrics, and plan."],
     ["Nov 10 & 12", "Intermediate", "Data generated, features built, baseline results, and limitations."],
-    ["Nov 24 & 26", "Final presentation", "All four models tuned and compared, demo working."],
+    ["Nov 24 & 26", "Final presentation", "All eight models tuned and compared, demo working."],
     ["Dec 6", "Final report", "Write-up submitted and code on GitHub."],
   ];
   miles.forEach(([d, h, b], i) => {
@@ -262,9 +267,9 @@ async function icon(Comp, color = "#FFFFFF") {
     text(s, h, { x: x + 0.25, y: 4.05, w: 2.2, h: 0.4, fontSize: 18, bold: true, objectName: "Milestone header " + (i + 1) });
     text(s, b, { x: x + 0.25, y: 4.55, w: 2.2, h: 1.5, fontSize: 14, objectName: "Milestone text " + (i + 1) });
   });
-  s.addNotes("LOGAN: For the timeline, today is the proposal. By the intermediate presentation, we'll have the data generated, features built, and baseline results, along with limitations. By the final presentation, all four models will be tuned and compared with the demo working. The final report and code go on GitHub on December 6th. Thanks, we're happy to take questions.");
+  s.addNotes("LOGAN: For the timeline, today is the proposal. By the intermediate presentation, we'll have the data generated, features built, and baseline results, along with limitations. By the final presentation, all eight models will be tuned and compared with the demo working. The final report and code go on GitHub on December 6th. Thanks, we're happy to take questions.");
 
-  await pres.writeFile({ fileName: "/home/claude/Fraud_Detection_Proposal.pptx" });
-  await applyTheme("/home/claude/Fraud_Detection_Proposal.pptx", THEME);
+  await pres.writeFile({ fileName: path.join(OUT, "Fraud_Detection_Proposal.pptx") });
+  await applyTheme(path.join(OUT, "Fraud_Detection_Proposal.pptx"), THEME);
   console.log("done");
 })();

@@ -2,12 +2,12 @@
 
 Joshua Francis and Logan Digilormo. Graduate Machine Learning, LSU Shreveport.
 
-Classical machine learning (logistic regression, decision tree, random forest, gradient boosting) for
-detecting fraud in simulated credit card transactions, with time-aware cross-validation, PCA/t-SNE
-dimensionality reduction, and an Apple-inspired web demo.
+Eight classical machine learning models (logistic regression, decision tree, random forest, extra trees, XGBoost, LightGBM,
+calibrated linear SVM, Naive Bayes) for detecting fraud in simulated credit card transactions, with time-aware cross-validation,
+F1 and PR-AUC reporting, SVD and t-SNE dimensionality reduction, and an Apple-inspired web demo.
 
 ## Repository layout
-- `Presentations/` proposal, intermediate, and final decks, each with speaker notes
+- `Presentations/` proposal, intermediate, and final decks, each in its own folder with speaker notes
 - `Report/` final report draft
 - `Project Files/fraud-detection-ml/` all code, trained models, and the web demo
 

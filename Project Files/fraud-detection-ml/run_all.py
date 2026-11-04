@@ -40,6 +40,8 @@ def main():
         get_generator(a.use_zip)
         if RAW.exists(): shutil.rmtree(RAW)
         run([py, "datagen.py", "-n", a.customers, "-seed", 42, "-o", RAW, "01-01-2025", "12-31-2025"], cwd=GEN)
+    for stale in ["reports/cv_cache", "reports/parts"]:  # cached partial results from earlier runs must not leak into a fresh run
+        if (ROOT / stale).exists(): shutil.rmtree(ROOT / stale)
     for step in ["load.py", "make_features.py", "cv.py", "train.py", "dimred.py", "dimred_continuous.py"]:
         run([py, ROOT / "src" / "fraud" / step])
     print("\nDone. Results: reports/results.json  |  Demo: uvicorn app.server:app --port 8000")
