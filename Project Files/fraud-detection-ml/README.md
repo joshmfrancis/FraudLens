@@ -31,7 +31,8 @@ Python 3.11 or newer (3.12 recommended). Git is optional. Works on Windows, macO
 cd path/to/fraud-detection-ml
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 brew install libomp            # one time; XGBoost and LightGBM need it
 uvicorn app.server:app --port 8000
 ```
@@ -41,11 +42,14 @@ uvicorn app.server:app --port 8000
 cd path\to\fraud-detection-ml
 py -m venv .venv
 .venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 uvicorn app.server:app --port 8000
 ```
 If PowerShell refuses to activate the environment, run `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` and activate again.
 In Command Prompt, activate with `.venv\Scripts\activate.bat` instead.
+
+Important: run `uvicorn` only after the virtual environment is activated. If you see `ModuleNotFoundError: No module named 'lightgbm'` or `xgboost`, create/activate the project venv and install the pinned requirements from the project root.
 
 Then open http://localhost:8000. If the port is busy, use `--port 8001`. Scores are model outputs on simulated data; most models use class weights, so they are not true probabilities. The model switcher offers all eight models.
 

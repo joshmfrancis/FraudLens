@@ -11,8 +11,23 @@ from sklearn.calibration import CalibratedClassifierCV
 from sklearn.naive_bayes import GaussianNB
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
-from xgboost import XGBClassifier
-from lightgbm import LGBMClassifier
+
+try:
+    from xgboost import XGBClassifier
+except ModuleNotFoundError as exc:
+    raise ModuleNotFoundError(
+        "xgboost is required to run FraudLens. Activate the project virtual environment "
+        "and run `python -m pip install -r requirements.txt` from the project root."
+    ) from exc
+
+try:
+    from lightgbm import LGBMClassifier
+except ModuleNotFoundError as exc:
+    raise ModuleNotFoundError(
+        "lightgbm is required to run FraudLens. Activate the project virtual environment "
+        "and run `python -m pip install -r requirements.txt` from the project root."
+    ) from exc
+
 from fraud.features import GROUPS, CATS
 
 SEED = 42
