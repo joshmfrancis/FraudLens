@@ -8,10 +8,13 @@ from fraud.common import *
 from fraud.svd import svd_fit, svd_transform, energy, k_for
 df, X, y, n85 = load_xy(); cv = json.load(open("reports/cv_results.json")); R = json.load(open("reports/results.json"))
 Xd, yd, Xt, yt = X[:n85], y[:n85], X[n85:], y[n85:]; spw = spw_from(yd)
+# the 13 continuous inputs; the binary flags and category one-hots are left untouched
 CONT = ["amt", "city_pop", "age", "hour", "dist_home_mi", "secs_since_prev", "dist_from_prev_mi", "speed_mph", "amt_mean_past", "amt_ratio", "amt_z", "txn_1h", "txn_24h"]
 ci = [ALL.index(c) for c in CONT]; oi = [i for i in range(len(ALL)) if i not in ci]
+# SVD on only the continuous columns, keep enough components for 95% energy, then re-attach the untouched columns
 f = svd_fit(Xd[:, ci]); cum = np.cumsum(energy(f)); k = k_for(cum, .95)
 Fd = np.hstack([svd_transform(f, Xd[:, ci], k), Xd[:, oi]]); Ft = np.hstack([svd_transform(f, Xt[:, ci], k), Xt[:, oi]]); rows = []
+# retrain all 8 models on the reduced inputs and compare test PR-AUC with the full-feature version
 for key in KEYS:
     cf = f"reports/parts/svdcont_{key}.json"
     if os.path.exists(cf): rows.append(json.load(open(cf))); continue

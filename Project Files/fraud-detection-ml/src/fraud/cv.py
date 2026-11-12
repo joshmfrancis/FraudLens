@@ -8,10 +8,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]; os.chdir(ROOT); sys.path.insert(0, str(ROOT / "src"))  # works from any folder, on any OS
 from fraud.common import *
 
+# c = size of one of the 6 equal time chunks of the development data; spw = fraud class weight
 df, X, y, n85 = load_xy(); c = n85 // 6; spw = spw_from(y[:n85])
+# Expanding window: fold k trains on chunks 1..k (rows 0..k*c) and validates on chunk k+1. The last chunk absorbs any leftover rows.
 bounds = [(0, k * c, k * c, (k + 1) * c if k < 5 else n85) for k in range(1, N_FOLDS + 1)]  # (train_start, train_end, val_start, val_end)
+# Each (model, params, fold) result is cached to disk so an interrupted run resumes where it stopped
 os.makedirs("reports/cv_cache", exist_ok=True); t0 = time.time(); done = True; BUDGET = float(os.environ.get('FRAUD_TIME_BUDGET', '1e9'))
 def pid(p): return "_".join(f"{k}{v}" for k, v in p.items())
+# Step 1: for every model, every grid combination, and every fold: fit on the past, predict the next chunk, save the PR-AUC
 for key, grid in GRIDS.items():
     for vals in itertools.product(*grid.values()):
         p = dict(zip(grid.keys(), vals))
@@ -23,6 +27,8 @@ for key, grid in GRIDS.items():
             np.savez(fn, pred=pr.astype(np.float32), ap=average_precision_score(y[va:vb], pr))
             print(key, p, "fold", f, f"AP={float(np.load(fn)['ap']):.4f}", f"{time.time()-t0:.0f}s", flush=True)
 if not done: print("PARTIAL - rerun"); sys.exit(0)
+# Step 2: summarize. Pick each model's best settings by mean PR-AUC across folds, then choose its decision threshold
+# from the pooled out-of-fold predictions (the cutoff that maximizes F1), and record per-fold F1 at that threshold.
 out = {"n_folds": N_FOLDS, "chunks": [], "models": {}}
 for i in range(6):
     s, e = i * c, ((i + 1) * c if i < 5 else n85)
