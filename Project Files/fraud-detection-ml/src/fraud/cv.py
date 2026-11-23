@@ -17,8 +17,7 @@ os.makedirs("reports/cv_cache", exist_ok=True); t0 = time.time(); done = True; B
 def pid(p): return "_".join(f"{k}{v}" for k, v in p.items())
 # Step 1: for every model, every grid combination, and every fold: fit on the past, predict the next chunk, save the PR-AUC
 for key, grid in GRIDS.items():
-    for vals in itertools.product(*grid.values()):
-        p = dict(zip(grid.keys(), vals))
+    for p in combos(grid):
         for f, (a, b, va, vb) in enumerate(bounds, 1):
             fn = f"reports/cv_cache/{key}_{pid(p)}_f{f}.npz"
             if os.path.exists(fn): continue
@@ -35,8 +34,8 @@ for i in range(6):
     out["chunks"].append({"start": str(df.dt.iloc[s].date()), "end": str(df.dt.iloc[e - 1].date()), "rows": e - s, "fraud_rate": float(y[s:e].mean())})
 for key, grid in GRIDS.items():
     rows = []
-    for vals in itertools.product(*grid.values()):
-        p = dict(zip(grid.keys(), vals)); aps = [float(np.load(f"reports/cv_cache/{key}_{pid(p)}_f{f}.npz")["ap"]) for f in range(1, N_FOLDS + 1)]
+    for p in combos(grid):
+        aps = [float(np.load(f"reports/cv_cache/{key}_{pid(p)}_f{f}.npz")["ap"]) for f in range(1, N_FOLDS + 1)]
         rows.append({"params": p, "mean_pr_auc": float(np.mean(aps)), "std_pr_auc": float(np.std(aps)), "folds": aps})
     best = max(rows, key=lambda r: r["mean_pr_auc"]); p = best["params"]
     preds = [np.load(f"reports/cv_cache/{key}_{pid(p)}_f{f}.npz")["pred"] for f in range(1, N_FOLDS + 1)]

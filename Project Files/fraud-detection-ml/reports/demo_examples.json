@@ -1,64 +1,64 @@
 [
  {
   "name": "Coffee near home",
-  "score": 0.08638026370102778,
+  "score": 0.09168442425458545,
   "verdict": "Looks normal",
-  "driver": "Amount",
+  "driver": "Time of day",
   "all": {
    "logreg": 0.016,
    "tree": 0.298,
-   "rf": 0.086,
-   "et": 0.054,
-   "gb": 0.032,
-   "lgbm": 0.312,
-   "svm": 0.019,
+   "rf": 0.092,
+   "et": 0.061,
+   "gb": 0.059,
+   "lgbm": 0.004,
+   "svm": 0.02,
    "nb": 0.0
   }
  },
  {
   "name": "Gas on a road trip",
-  "score": 0.0008189027486460285,
+  "score": 0.0,
   "verdict": "Looks normal",
   "driver": "Recent activity",
   "all": {
    "logreg": 0.07,
    "tree": 0.0,
-   "rf": 0.001,
-   "et": 0.078,
-   "gb": 0.002,
+   "rf": 0.0,
+   "et": 0.06,
+   "gb": 0.023,
    "lgbm": 0.001,
-   "svm": 0.017,
+   "svm": 0.018,
    "nb": 0.0
   }
  },
  {
   "name": "Late-night electronics",
-  "score": 0.976088448206331,
+  "score": 0.9895862986066587,
   "verdict": "Likely fraud",
   "driver": "Amount",
   "all": {
    "logreg": 0.999,
    "tree": 0.999,
-   "rf": 0.976,
-   "et": 0.947,
-   "gb": 0.978,
-   "lgbm": 0.979,
+   "rf": 0.99,
+   "et": 0.911,
+   "gb": 0.963,
+   "lgbm": 0.981,
    "svm": 0.019,
    "nb": 1.0
   }
  },
  {
   "name": "Big evening purchase",
-  "score": 0.5666959097689119,
+  "score": 0.8140999928141972,
   "verdict": "Worth a look",
   "driver": "Amount",
   "all": {
    "logreg": 0.979,
    "tree": 0.867,
-   "rf": 0.567,
-   "et": 0.95,
-   "gb": 0.516,
-   "lgbm": 0.658,
+   "rf": 0.814,
+   "et": 0.916,
+   "gb": 0.707,
+   "lgbm": 0.429,
    "svm": 0.02,
    "nb": 0.056
   }

@@ -57,30 +57,48 @@ def spw_from(y_dev): return float(np.sqrt((y_dev == 0).sum() / (y_dev == 1).sum(
 # Model factory: returns an untrained model for a key. **p are the tuned hyperparameters from GRIDS / the CV winner.
 # class_weight / scale_pos_weight handle the class imbalance (1% fraud).
 def make_model(key, spw=8.9, **p):
+    # kw(): start from the fixed defaults below, then let any value in p (from GRIDS or the CV winner) override them
+    def kw(**d): d.update(p); return d
     # Josh: logistic regression (log loss) - scaled inputs, balanced class weights
-    if key == "logreg": return make_pipeline(StandardScaler(), LogisticRegression(class_weight="balanced", max_iter=2000, **p))
+    if key == "logreg": return make_pipeline(StandardScaler(), LogisticRegression(**kw(class_weight="balanced", max_iter=2000)))
     # Josh: decision tree / random forest / extra trees - all split on entropy (criterion="log_loss")
-    if key == "tree": return DecisionTreeClassifier(criterion="log_loss", class_weight="balanced", random_state=SEED, **p)
-    if key == "rf": return RandomForestClassifier(n_estimators=60, criterion="log_loss", class_weight="balanced_subsample", max_samples=0.3, n_jobs=-1, random_state=SEED, **p)
-    if key == "et": return ExtraTreesClassifier(n_estimators=60, criterion="log_loss", bootstrap=True, class_weight="balanced_subsample", max_samples=0.3, n_jobs=-1, random_state=SEED, **p)
-    # Logan: XGBoost (binary:logistic = cross-entropy) and LightGBM, both weighted with scale_pos_weight
-    if key == "gb": return XGBClassifier(objective="binary:logistic", tree_method="hist", n_estimators=50, learning_rate=0.1, subsample=0.8, colsample_bytree=0.8,
-                                         eval_metric="logloss", n_jobs=1, random_state=SEED, scale_pos_weight=spw, **p)
-    if key == "lgbm": return LGBMClassifier(objective="binary", n_estimators=60, learning_rate=0.1, subsample=0.8, subsample_freq=1, colsample_bytree=0.8,
-                                            scale_pos_weight=spw, n_jobs=1, random_state=SEED, verbose=-1, **p)
+    if key == "tree": return DecisionTreeClassifier(**kw(criterion="log_loss", class_weight="balanced", random_state=SEED))
+    if key == "rf": return RandomForestClassifier(**kw(n_estimators=100, criterion="log_loss", class_weight="balanced_subsample", max_samples=0.3, n_jobs=-1, random_state=SEED))
+    if key == "et": return ExtraTreesClassifier(**kw(n_estimators=100, criterion="log_loss", bootstrap=True, class_weight="balanced_subsample", max_samples=0.3, n_jobs=-1, random_state=SEED))
+    # Logan: XGBoost (binary:logistic = cross-entropy) and LightGBM; scale_pos_weight defaults to spw but is also a tuned setting
+    if key == "gb": return XGBClassifier(**kw(objective="binary:logistic", tree_method="hist", n_estimators=50, learning_rate=0.1, subsample=0.8, colsample_bytree=0.8,
+                                              eval_metric="logloss", n_jobs=-1, random_state=SEED, scale_pos_weight=spw))
+    if key == "lgbm": return LGBMClassifier(**kw(objective="binary", n_estimators=60, learning_rate=0.1, subsample=0.8, subsample_freq=1, colsample_bytree=0.8,
+                                                 scale_pos_weight=spw, n_jobs=-1, random_state=SEED, verbose=-1))
     # Logan: linear SVM trained with hinge loss (SGD), then Platt-scaled (sigmoid) so it outputs probabilities
-    if key == "svm": return CalibratedClassifierCV(make_pipeline(StandardScaler(), SGDClassifier(loss="hinge", class_weight="balanced", max_iter=30, tol=None, random_state=SEED, **p)),
+    if key == "svm": return CalibratedClassifierCV(make_pipeline(StandardScaler(), SGDClassifier(**kw(loss="hinge", class_weight="balanced", max_iter=30, tol=None, random_state=SEED))),
                                                   method="sigmoid", cv=3)
     # Logan: Gaussian Naive Bayes - maximum likelihood, no loss function
     if key == "nb": return GaussianNB(**p)
 
-# Small hyperparameter grids searched in cross-validation; the combo with the best mean PR-AUC wins (see cv.py)
-GRIDS = {"logreg": {"C": [1.0]},
-         "tree": {"max_depth": [8, 12], "min_samples_leaf": [50, 200]},
-         "rf": {"max_depth": [10, 14], "min_samples_leaf": [10, 40]},
-         "et": {"max_depth": [12, 16], "min_samples_leaf": [10, 40]},
-         "gb": {"max_depth": [6, 8], "min_child_weight": [1, 5]},
-         "lgbm": {"num_leaves": [7, 15], "min_child_samples": [100, 300]},
-         "svm": {"alpha": [1e-5, 1e-4]},
-         "nb": {"var_smoothing": [1e-9, 1e-6]}}
+# Hyperparameter grids searched in cross-validation (cv.py tries every combination; the one with the best mean PR-AUC across the 5 time-aware folds wins).
+# Any value listed here overrides the default set in make_model(). The test month is never used to choose settings.
+# scale_pos_weight 1 = no extra fraud weight, 9 = about sqrt(normal/fraud), 3 = in between.
+GRIDS = {"logreg": {"C": [0.01, 0.1, 1.0, 10.0]},
+         "tree": {"max_depth": [8, 12, 16], "min_samples_leaf": [20, 50, 200]},
+         "rf": {"max_depth": [12, 16, 20], "min_samples_leaf": [5, 10, 20]},
+         "et": {"max_depth": [16, 20, 24], "min_samples_leaf": [5, 10, 20]},
+         # boosted models: a coarse grid first, then two finer grids, each around the previous winner (its best values sat at the edge of the previous grid)
+         "gb": [{"scale_pos_weight": [1.0, 3.0, 9.0], "max_depth": [4, 6], "min_child_weight": [5, 20], "colsample_bytree": [0.5, 0.8], "subsample": [0.5, 0.8], "n_estimators": [50, 100]},
+                {"scale_pos_weight": [9.0, 20.0], "max_depth": [6, 8], "min_child_weight": [2, 5], "colsample_bytree": [0.3, 0.5], "subsample": [0.5], "n_estimators": [30, 50]},
+                {"scale_pos_weight": [20.0, 40.0], "max_depth": [8, 10], "min_child_weight": [5, 10], "colsample_bytree": [0.5], "subsample": [0.5], "n_estimators": [20, 30, 40]}],
+         "lgbm": [{"scale_pos_weight": [1.0, 3.0, 9.0], "num_leaves": [7, 15, 31], "min_child_samples": [100, 300], "colsample_bytree": [0.5, 0.8], "n_estimators": [60, 120]},
+                  {"scale_pos_weight": [3.0], "num_leaves": [31, 63], "min_child_samples": [300, 600], "colsample_bytree": [0.3, 0.5], "n_estimators": [30, 60]},
+                  {"scale_pos_weight": [3.0, 9.0], "num_leaves": [63, 127], "min_child_samples": [600, 1000], "colsample_bytree": [0.5], "n_estimators": [20, 30, 45]}],
+         "svm": {"alpha": [1e-6, 1e-5, 1e-4, 1e-3]},
+         "nb": {"var_smoothing": [1e-9, 1e-7, 1e-5, 1e-3]}}
+# A grid is a dict {setting: [values]} or a list of such dicts. combos() returns every combination (duplicates removed), in a fixed order.
+def combos(grid):
+    import itertools
+    seen, out = set(), []
+    for g in ([grid] if isinstance(grid, dict) else grid):
+        for vals in itertools.product(*g.values()):
+            p = dict(zip(g.keys(), vals)); k = tuple(sorted(p.items()))
+            if k not in seen: seen.add(k); out.append(p)
+    return out
 N_FOLDS = 5  # expanding-window time-series CV over the development period (first 85% of rows)

@@ -739,3 +739,41 @@ web app. Do not cut: time split, leakage tests, limitations, ablation.
  [ ] Talking-points txt for decks 2 and 3 (script, Q&A, glossary).
  [ ] Final report exported; repo README and tests complete.
  [ ] No Kaggle data, no deep learning, no real personal data.
+
+==========================================================================
+22. FINAL-STAGE UPDATE (Nov 22): CHANGES FROM PROFESSOR FEEDBACK
+==========================================================================
+Added to the code (src/fraud/, all run by run_all.py):
+ - validity.py: checks that the generated Sparkov data behaves as the
+   generator's fraud profiles say (one fraud burst per customer, larger
+   amounts, night-time shopping, category mix, no distance difference) and
+   shows why the monthly fraud rate drifts (fraud per day is flat; normal
+   volume per day jumps in the holiday weeks). Writes reports/sparkov_validity.json.
+ - figures.py: precision-recall curves for all eight models on the test
+   month (reports/figures/pr_curves.png).
+ - boosting_probe.py: validation-fold check of why XGBoost does not beat the
+   random forest (bigger boosted models overfit; effect of dropping the
+   customer-identifying columns city size and age). Writes reports/boosting_probe.json.
+ - common.py: GRIDS widened for every model. Boosted models use a coarse grid
+   and then finer grids around the previous winner, because the best values sat
+   at the edge of the previous grid. make_model() now lets any grid value
+   override its default (including scale_pos_weight, trees, sampling).
+   combos() expands a grid or a list of grids. All winners are chosen by mean
+   PR-AUC across the five time-aware folds; the test month is never used for tuning.
+
+Final deck (decks/build_final.js) now has 20 slides, still alternating Josh and Logan, Logan closing:
+  1 Title (Josh) | 2 Problem (Logan) | 3 Data and features (Josh)
+  4 Is the simulated data believable? (Logan) | 5 History features and why they cannot leak (Josh)
+  6 SVD (Logan) | 7 t-SNE and SVD in the models (Josh) | 8 Eight models and losses (Logan)
+  9 Handling the class imbalance (Josh) | 10 Time-aware cross-validation (Logan)
+  11 Hyperparameter tuning (Josh) | 12 Model comparison (Logan)
+  13 Why XGBoost is not the winner (Josh) | 14 Precision-recall curves, all models (Logan)
+  15 Best model in detail (Josh) | 16 What drives fraud (Logan) | 17 Do our features help? (Josh)
+  18 Live demo (Logan) | 19 Limitations and conclusions (Josh) | 20 Who did what (Logan)
+The notes txt gets matching Q&A and definitions (history and leakage, Sparkov
+validity, class imbalance, PR curve, grid search, XGBoost vs forest, PCA, binary
+classification). The Proposal and Intermediate decks and notes are unchanged.
+
+Report (reports/make_report.py): new sections 3.1 (is the simulated data
+believable), history features and leakage, class imbalance, hyperparameter
+tuning table, PR-curve figure.
