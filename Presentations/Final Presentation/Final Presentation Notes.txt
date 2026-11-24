@@ -46,13 +46,18 @@ against 44 for normal purchases, and 86% of fraud happens at night
 against 30% of normal purchases. Distance from home is the same for
 both, which is why distance carried no signal. So the generator does
 what it documents. What it cannot tell us is whether real fraud looks
-like this. The fraud rate is a setting, one burst per customer, and real
-card fraud is typically far rarer than one percent, so we use this data
-to compare methods fairly, not to predict real-world accuracy. It also
-explains our drift: fraud per day stays flat all year, but Sparkov
-roughly doubles normal volume in the holiday weeks, so the December
-fraud rate falls to 0.5%. Josh will explain how the history features
-work and why they cannot leak.
+like this. We can only say the patterns we see, large amounts, night
+purchases and online categories, are ones commonly described for card
+fraud, and that distance from home, the fraud rate and the one-burst
+design are clearly simpler than real life, so absolute scores would
+likely be lower on real data while the comparisons between methods are
+the part to trust. The fraud rate is a setting, one burst per customer,
+and real card fraud is typically far rarer than one percent, so we use
+this data to compare methods fairly, not to predict real-world accuracy.
+It also explains our drift: fraud per day stays flat all year, but
+Sparkov roughly doubles normal volume in the holiday weeks, so the
+December fraud rate falls to 0.5%. Josh will explain how the history
+features work and why they cannot leak.
 
 --- SLIDE 5: HISTORY FEATURES, AND WHY THEY CANNOT LEAK (Josh) ---
 Here is what the history group in our features means, and why it cannot
