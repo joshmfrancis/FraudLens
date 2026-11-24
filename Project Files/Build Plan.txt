@@ -777,3 +777,6 @@ classification). The Proposal and Intermediate decks and notes are unchanged.
 Report (reports/make_report.py): new sections 3.1 (is the simulated data
 believable), history features and leakage, class imbalance, hyperparameter
 tuning table, PR-curve figure.
+
+23. Final deck trimmed to 10 slides (11/23)
+Slides dropped from the 20-slide build: problem, data and features, SVD, t-SNE, time-aware CV, best model in detail, what drives fraud, do our features help, live demo, who did what. Their key points were folded into the remaining slides (problem/data into slide 2, CV into the tuning slide, forest confusion counts into the comparison slide, who-did-what into the last slide). decks/build_final.js still builds all 20; decks/trim_final.py removes the dropped slides (edit DROP in both files to change) and the notes are filtered in build_final.js. Order: build_final.js, then trim_final.py, then make_notes.py. Speakers alternate JOSH/LOGAN with Logan closing.
