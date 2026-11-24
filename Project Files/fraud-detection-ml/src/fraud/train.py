@@ -10,10 +10,12 @@ from fraud.common import *
 from fraud.features import GROUPS, CATS
 def log(*a): print(*a, flush=True)
 
+# Load data + the CV winners. Dev = first 85% (Jan-Nov), test = last 15% (Dec). The test month is scored once, after every choice is made.
 df, X, y, n85 = load_xy(); cv = json.load(open("reports/cv_results.json")); spw = spw_from(y[:n85])
 Xd, yd, Xt, yt = X[:n85], y[:n85], X[n85:], y[n85:]
 def info(d, yy): return {"rows": int(len(d)), "fraud": int(yy.sum()), "fraud_rate": float(yy.mean()), "start": str(d.dt.min().date()), "end": str(d.dt.max().date())}
 split = {"dev": info(df.iloc[:n85], yd), "test": info(df.iloc[n85:], yt), "cv_chunks": cv["chunks"]}
+# Scores a fitted model: precision/recall/F1 at the chosen threshold, PR-AUC, log loss, ROC-AUC, accuracy, confusion matrix, and the PR curve
 def evaluate(m, Xe, ye, thr, cols=None):
     p = m.predict_proba(Xe)[:, 1]; pred = (p >= thr).astype(int); tn, fp, fn, tp = confusion_matrix(ye, pred).ravel()
     pr, rc, _ = precision_recall_curve(ye, p); grid = np.linspace(0, 1, 101)
@@ -22,6 +24,7 @@ def evaluate(m, Xe, ye, thr, cols=None):
             "pr_auc": float(average_precision_score(ye, p)), "log_loss": float(log_loss(ye, np.clip(p, 1e-6, 1 - 1e-6))), "roc_auc": float(roc_auc_score(ye, p)), "accuracy": float((pred == ye).mean()),
             "confusion": {"tp": int(tp), "fp": int(fp), "fn": int(fn), "tn": int(tn)}}, {"precision": [round(v, 4) for v in pint], "recall": [round(v, 2) for v in grid]}
 os.makedirs("reports/parts", exist_ok=True); os.makedirs("models", exist_ok=True); results = []
+# Main loop: for each of the 8 models, refit on all development data with the CV-selected settings, evaluate once on the test month, save the model
 for key in KEYS:
     pf = f"reports/parts/{key}.json"
     if os.path.exists(pf): results.append(json.load(open(pf))); log("cached", key); continue
@@ -33,14 +36,17 @@ for key in KEYS:
          "cv": {"folds_pr_auc": c["folds_pr_auc"], "mean_pr_auc": c["mean_pr_auc"], "std_pr_auc": c["std_pr_auc"], "folds_f1": c["folds_f1"], "mean_f1": c["mean_f1"], "std_f1": c["std_f1"]}}
     log(f"{key}: CV PR-AUC {c['mean_pr_auc']:.3f}+/-{c['std_pr_auc']:.3f} | test P={tm['precision']:.3f} R={tm['recall']:.3f} F1={tm['f1']:.3f} PR-AUC={tm['pr_auc']:.3f} ({secs:.0f}s)")
     joblib.dump(m, f"models/{key}.joblib"); json.dump(r, open(pf, "w")); results.append(r)
+# Best model = highest mean CV PR-AUC (selected on validation folds, NOT on the test month)
 best = max(results, key=lambda r: r["cv"]["mean_pr_auc"])["key"]; log("best by CV PR-AUC:", best)
 bm = joblib.load(f"models/{best}.joblib"); rng = np.random.RandomState(SEED)
+# Permutation importance for the best model (post-hoc analysis only; nothing is selected from it)
 imp_f = "reports/parts/importance.json"
 if os.path.exists(imp_f): imp = json.load(open(imp_f))
 else:
     ix = rng.choice(len(Xt), min(60000, len(Xt)), replace=False)  # post-hoc analysis on the test month; not used for any selection
     pi = permutation_importance(bm, Xt[ix], yt[ix], scoring="average_precision", n_repeats=2, random_state=SEED, n_jobs=1)
     imp = sorted([{"feature": f, "value": float(v)} for f, v in zip(ALL, pi.importances_mean)], key=lambda d: -d["value"])[:12]; json.dump(imp, open(imp_f, "w"))
+# Ablation: retrain the best model on different feature groups to see which groups help (also analysis only)
 CAT = ["cat_" + c for c in CATS]
 sets = {"A: base + time + category": GROUPS["base"] + GROUPS["time"] + CAT, "B: A + distance": GROUPS["base"] + GROUPS["time"] + GROUPS["distance"] + CAT,
         "C: A + history": GROUPS["base"] + GROUPS["time"] + GROUPS["history"] + CAT, "D: all features": ALL,
@@ -52,9 +58,11 @@ for i, (nm, cols) in enumerate(sets.items()):
     if time.time() - t0 > float(os.environ.get('FRAUD_TIME_BUDGET', '1e9')): log("PARTIAL - rerun"); sys.exit(0)
     ci = [ALL.index(c) for c in cols]; m = make_model(best, spw=spw, **cv["models"][best]["best_params"]); m.fit(Xd[:, ci], yd)
     ap = float(average_precision_score(yt, m.predict_proba(Xt[:, ci])[:, 1])); abl.append({"name": nm, "features": len(cols), "pr_auc": ap}); json.dump(abl[-1], open(af, "w")); log("ablation", nm, round(ap, 4))
+# Exploratory stats for the report: single-feature ROC-AUC (distance = 0.50), distance histograms, fraud by hour and category
 auc1 = {c: float(roc_auc_score(df.is_fraud, df[c])) for c in ["dist_home_mi", "amt", "amt_ratio", "speed_mph", "is_night", "txn_24h"]}
 bins = np.linspace(0, 200, 21); h = lambda m: np.histogram(df.loc[df.is_fraud == m, "dist_home_mi"].clip(upper=199.9), bins=bins)[0].tolist()
 fc = df.groupby("category").is_fraud.mean().round(5).sort_values(ascending=False)
+# Assemble everything into reports/results.json - the single source for the slides, report, and web demo numbers
 out = {"dataset": {"customers": int(df.cc_num.nunique()), "rows": int(len(df)), "date_start": str(df.dt.min().date()), "date_end": str(df.dt.max().date()), "fraud_rows": int(df.is_fraud.sum()),
         "fraud_rate": float(df.is_fraud.mean()), "dummy_accuracy": float(1 - df.is_fraud.mean()), "split": split}, "features": GROUPS, "n_model_features": len(ALL),
        "validation": {"method": "time-aware expanding-window cross-validation", "folds": N_FOLDS, "chunks": cv["chunks"]},

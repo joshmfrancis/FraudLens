@@ -1,0 +1,36 @@
+[
+ {
+  "name": "XGBoost, bigger (400 trees, depth 10)",
+  "key": "gb",
+  "params": {
+   "n_estimators": 400,
+   "max_depth": 10
+  },
+  "all 31 inputs": 0.3160643041247626,
+  "without city size and age": 0.44206120657154235
+ },
+ {
+  "name": "XGBoost, tuned",
+  "key": "gb",
+  "params": {
+   "scale_pos_weight": 40.0,
+   "max_depth": 10,
+   "min_child_weight": 10,
+   "colsample_bytree": 0.5,
+   "subsample": 0.5,
+   "n_estimators": 30
+  },
+  "all 31 inputs": 0.6870711188429267,
+  "without city size and age": 0.6796924197435933
+ },
+ {
+  "name": "Random forest, tuned",
+  "key": "rf",
+  "params": {
+   "max_depth": 16,
+   "min_samples_leaf": 20
+  },
+  "all 31 inputs": 0.7201589955583403,
+  "without city size and age": 0.70103752787421
+ }
+]

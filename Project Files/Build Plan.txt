@@ -1,0 +1,779 @@
+CREDIT CARD FRAUD DETECTION - FULL PROJECT BUILD PLAN (FOR AN AI AGENT)
+Team: Joshua Francis ("Josh") and Logan Digilormo ("Logan")
+Course: graduate Machine Learning, LSU Shreveport. Professor: Chakrabarty.
+
+==========================================================================
+HOW TO USE THIS DOCUMENT
+==========================================================================
+You are an AI agent (e.g., Claude Code) building this entire project
+end to end. Work phase by phase, in order. Each phase has:
+  - GOAL, STEPS, OUTPUTS, and DONE WHEN (acceptance checks).
+Rules for working:
+  - Never invent numbers. Every number in a slide, note, report, or web
+    page must come from reports/results.json or a file you generated.
+  - If a command fails, run it with -h or read the repo README/source,
+    fix it, and record what you changed in docs/BUILD_LOG.md.
+  - After each phase, write a 5-line summary to docs/BUILD_LOG.md
+    (what ran, key numbers, anything surprising).
+  - Section 20 lists decisions only the humans can make. Do not guess
+    them; ask, and keep going on other work meanwhile.
+  - Do not email the professor or push to GitHub yourself. Prepare
+    everything and give the humans the exact commands/text.
+
+==========================================================================
+0. STATUS UPDATE AND NEW REQUIREMENTS (READ FIRST)
+==========================================================================
+REQUIREMENTS (all implemented; latest professor changes marked NEW):
+ - NEW: EIGHT models, split between the teammates:
+     Josh : logistic regression, decision tree, random forest, extra trees
+     Logan: XGBoost (gradient boosting), LightGBM, linear SVM (probability-calibrated), Naive Bayes
+     Both : feature pipeline, scoring demo, web front end, decks, report, GitHub
+ - NEW: SVD instead of PCA for dimensionality reduction. Scale columns, do NOT center (centered SVD = PCA).
+   Report k for 95% energy, a 2D view, t-SNE on a balanced sample, and all eight models on reduced inputs
+   (all features, and continuous features only with flags/categories kept). src/fraud/svd.py, dimred.py, dimred_continuous.py.
+ - NEW: report BOTH F1 and PR-AUC for every model, in cross-validation (per fold) and on the test month.
+ - Time-aware, expanding-window 5-fold CV on Jan-Nov (src/fraud/cv.py); the last 15% of rows (December) is the
+   held-out test set. Never use shuffled k-fold.
+ - Loss: wherever a model has a loss it is cross-entropy (log loss for logistic regression, XGBoost, LightGBM;
+   entropy split criterion for tree, forest, extra trees). Linear SVM = hinge loss + log-loss (Platt) calibration.
+   Naive Bayes = maximum likelihood (no loss). State this honestly; never claim the SVM or Naive Bayes use cross-entropy directly.
+ - The LAST slide of the intermediate and final decks shows who does what.
+ - Intermediate and final decks and notes address the audience in the third person and never refer to the
+   person evaluating the project by name or title.
+ - Cross-platform: Windows and macOS instructions (README); macOS needs `brew install libomp` for XGBoost and LightGBM.
+RESULTS OF THE LATEST FULL RUN (code in Project Files/fraud-detection-ml; numbers come from reports/results.json):
+ - Data: 1,000 customers requested, 2025, seed 42. 877,369 rows, 998 customers, fraud 1.07% (9,377 rows); dummy accuracy 98.93%.
+ - Features: 31 model inputs. Development period Jan-Nov, test month Dec 2025.
+ Logistic regression: test F1 0.02, test PR-AUC 0.005, CV PR-AUC 0.13 +/- 0.12, CV F1 0.21
+ Decision tree: test F1 0.70, test PR-AUC 0.773, CV PR-AUC 0.46 +/- 0.32, CV F1 0.48
+ Random forest: test F1 0.72, test PR-AUC 0.767, CV PR-AUC 0.71 +/- 0.08, CV F1 0.66
+ Extra trees: test F1 0.36, test PR-AUC 0.474, CV PR-AUC 0.47 +/- 0.11, CV F1 0.34
+ XGBoost (gradient boosting): test F1 0.30, test PR-AUC 0.630, CV PR-AUC 0.51 +/- 0.18, CV F1 0.34
+ LightGBM: test F1 0.19, test PR-AUC 0.735, CV PR-AUC 0.46 +/- 0.23, CV F1 0.25
+ Linear SVM (calibrated): test F1 0.00, test PR-AUC 0.009, CV PR-AUC 0.40 +/- 0.29, CV F1 0.06
+ Naive Bayes: test F1 0.31, test PR-AUC 0.151, CV PR-AUC 0.30 +/- 0.04, CV F1 0.47
+ - Ablation (random forest PR-AUC): A 0.55, B (+distance) 0.52, C (+history) 0.77, D (all) 0.77, E (no distance/speed) 0.78.
+ - SVD: 22 of 31 components keep 95% of the energy (PCA needs 25). SVD on continuous features keeps most performance
+   for the forest (0.68 vs 0.77) and LightGBM; SVD on all features collapses every model (cause not isolated).
+KEY FINDINGS TO RESPECT (do not hide them):
+ - Distance from home has NO signal in this generated data (single-feature ROC-AUC 0.50).
+ - Fraud rate drifts: 1.17% in Jan-Nov vs 0.50% in December.
+ - Linear models (logistic regression, linear SVM) fail on test; thresholds chosen in CV do not always transfer (XGBoost, LightGBM, extra trees).
+ - Regenerating the data with the same seed can give slightly different counts, so always re-run everything and rebuild decks/notes/report from results.json.
+REMAINING:
+ - Humans: push the repo to GitHub, add the repo URL to the final deck/report, confirm presentation dates (11/26 is Thanksgiving).
+ - Report draft: shuffled-label check, references.
+
+==========================================================================
+1. QUICK FACTS
+==========================================================================
+Task: binary classification. Predict is_fraud (1 = fraud, 0 = not) for
+each credit card transaction. Classical ML only (NOT deep learning).
+Data: simulated transactions from the public Sparkov Data Generation
+tool, github.com/namebrandon/Sparkov_Data_Generation (MIT license).
+Models (8): logistic regression (baseline), decision tree, random forest, extra trees,
+XGBoost, LightGBM, linear SVM (calibrated), Naive Bayes.
+Imbalance handling: class weights (SMOTE optional, only if time allows).
+Metrics: precision, recall, F1, PR-AUC, confusion matrix. Never lead with
+accuracy (always-"not fraud" scores 99%+ if fraud is under 1%; measure
+the real number and report it).
+Key engineered features: haversine distance from home to merchant, time
+features, customer age, per-customer history features (past only).
+Split: by time (train earlier, validate, test later). No random split.
+Demo: score hand-built synthetic transactions. NO real bank or personal
+data anywhere (project rule).
+
+==========================================================================
+2. NON-NEGOTIABLE COURSE RULES
+==========================================================================
+- Machine learning, not deep learning. No neural networks.
+- Dataset must be publicly available and not boring/textbook (no house
+  prices). No private, work, or personal datasets.
+- The professor dislikes Kaggle. Generate data with the GitHub tool; do
+  not download Kaggle copies.
+- Effort matters more than accuracy: show feature engineering, careful
+  evaluation, ablation, and honest limitations.
+- 5% of the entire course grade comes from putting code and information
+  on GitHub. 25% of the grade is this project.
+- Show one other person online who did a similar project (already in
+  deck 1: sharmasapna/credit-card-fraud-detection on GitHub).
+- Intermediate deck MUST include Limitations and what has been done
+  against the proposal's requirements. Any change of title/topic must be
+  told to the professor BEFORE or DURING the intermediate presentation.
+
+==========================================================================
+3. DELIVERABLES AND DEADLINES (dates from the team's notes; the syllabus
+   dates are not accurate)
+==========================================================================
+ 1. Proposal deck - DONE. Moodle by 10/18, presented 10/20 and 10/22.
+ 2. Intermediate deck - Moodle by 11/08, presented 11/10 and 11/12.
+ 3. Final deck - Moodle by 11/22, presented 11/24 and 11/26.
+ 4. Final report - Moodle by 12/06.
+ 5. GitHub repo with code and information - by 12/06 (earlier is fine).
+ 6. Front-end demo (Apple-inspired web app) used in the final deck.
+ 7. Talking-points .txt for each deck (script + Q&A + glossary).
+
+==========================================================================
+4. ALREADY DONE (do not redo; use as design/style reference)
+==========================================================================
+- Fraud_Detection_Proposal.pptx (10 slides: Title, Problem, Data,
+  Features, Methods (4 models), Metrics, Plan, Related work, Expected
+  outcomes, Timeline). Speaker notes alternate JOSH/LOGAN each slide,
+  Josh first, Logan closes.
+- Fraud_Detection_Talking_Points_and_QA.txt (script, Q&A, glossary).
+- Sparkov_Dataset_Variables.txt (26-column data dictionary).
+- Email with the project idea sent to the professor.
+If the .pptx is available in the workspace, open it and copy its layouts.
+
+==========================================================================
+5. REPOSITORY LAYOUT (create this)
+==========================================================================
+fraud-detection-ml/
+  README.md                 project overview, setup, how to reproduce
+  requirements.txt
+  .gitignore                ignore data/raw, data/processed, models/
+  LICENSE                   MIT (note Sparkov is MIT-licensed too)
+  Makefile                  targets: data, features, train, export, app,
+                            decks, test
+  data/
+    raw/                    generator output (gitignored)
+    processed/              parquet files (gitignored)
+    sample/sample_5k.csv    5,000-row sample committed for reviewers
+  src/fraud/
+    config.py               paths, seeds, feature lists, constants
+    load.py                 read and concatenate generator files
+    features.py             preprocessing + feature engineering
+    split.py                time-based split
+    models.py               model definitions + tuning
+    evaluate.py             metrics, curves, threshold choice
+    ablation.py             feature-group experiments
+    explain.py              importance + per-transaction drivers
+    export.py               writes reports/results.json + figures
+  scripts/
+    generate_data.sh
+    run_pipeline.py         runs everything end to end
+  tests/                    pytest: haversine, leakage, split, API
+  notebooks/01_eda.ipynb    optional, readable EDA with commentary
+  app/
+    server.py               FastAPI backend
+    web/index.html, styles.css, app.js, assets/
+  decks/
+    design.js               shared design tokens + layouts + helpers
+    build_intermediate.js   builds deck 2 from results.json
+    build_final.js          builds deck 3 from results.json
+    notes/                  speaker notes as JSON (label + text)
+  reports/
+    results.json            single source of truth for all numbers
+    figures/                PNG/SVG exports
+    final_report.md         and exported .docx/.pdf (see Section 16)
+  docs/
+    BUILD_LOG.md, DATA_DICTIONARY.md, LIMITATIONS.md
+
+==========================================================================
+6. ENVIRONMENT
+==========================================================================
+Python 3.11+: pandas, numpy, pyarrow, scikit-learn, xgboost (or
+lightgbm), matplotlib, joblib, fastapi, uvicorn, pydantic, pytest, faker
+(generator dependency; use the generator's own requirements.txt).
+Node 18+: pptxgenjs, react, react-dom, react-icons, sharp (for decks).
+Set seeds to 42 everywhere (numpy, sklearn, xgboost, generator -seed).
+Record package versions in requirements.txt.
+
+==========================================================================
+7. PHASE 1 - GENERATE THE DATA
+==========================================================================
+GOAL: a realistic, reproducible simulated transaction table.
+STEPS:
+ 1. Clone the generator into data/sparkov/ (outside src/).
+ 2. Install its requirements.txt. Run `python datagen.py -h` and confirm
+    the exact flags and the date format (transaction script uses
+    MM-DD-YYYY).
+ 3. Generate with the documented usage:
+      python datagen.py -n <NUM_CUSTOMERS> -o <OUTPUT_FOLDER> \
+          <START_DATE> <END_DATE> -seed 42
+    Suggested: 1000 customers, a date range of about 12 months (e.g.,
+    01-01-2025 to 12-31-2025). Increase customers if training is fast.
+ 4. The v1.0 generator chunks transaction files (several per profile,
+    some empty). Read all non-empty files, concatenate into one table.
+ 5. Files are pipe-separated: pd.read_csv(path, sep="|"). Each
+    transaction row already includes the customer fields (flat table).
+ 6. Save to data/processed/transactions.parquet.
+ 7. Commit a 5,000-row stratified-by-time sample to data/sample/.
+EXPECTED COLUMNS (26):
+ Customer (16): ssn, cc_num, first, last, gender, street, city, state,
+   zip, lat, long, city_pop, job, dob, acct_num, profile
+ Transaction (10): trans_num, trans_date, trans_time, unix_time,
+   category, amt, is_fraud, merchant, merch_lat, merch_long
+DONE WHEN: one parquet file; assert the 26 columns exist; row count,
+ customer count, date range, and fraud rate are printed and logged.
+ Record the REAL fraud rate. (The generator assigns a one-day fraud
+ window to nearly every customer, so the rate depends on the date range
+ and profiles; do not assume it is under 1%.)
+
+==========================================================================
+8. PHASE 2 - VALIDATE AND EXPLORE
+==========================================================================
+GOAL: understand the data before modeling; catch generator artifacts.
+STEPS:
+ 1. Checks: nulls, duplicates, dtypes, trans_num unique, is_fraud in
+    {0,1}, lat/long ranges valid, amt > 0.
+ 2. Class balance: counts and percent. Compute accuracy of the dummy
+    "always not fraud" predictor (the "accuracy trap" number).
+ 3. Distance check: compute haversine home-to-merchant; compare the
+    distribution for fraud vs non-fraud. The generator places merchants
+    within ~1 degree (~70 miles) of home when not traveling and in a
+    larger radius when traveling. Inspect profiles/fraud_*.json in the
+    generator repo to see how fraud profiles set travel. Report how
+    separable fraud is by distance alone (single-feature ROC-AUC).
+ 4. Look at fraud by hour, weekday, category, amount buckets.
+ 5. Save 4-6 clean figures to reports/figures/ (consistent style: deck
+    palette in Section 16, large fonts, titles, labeled axes).
+OUTPUTS: reports/eda_summary.json (feeds results.json), figures,
+ docs/LIMITATIONS.md draft listing every artifact found.
+DONE WHEN: you can state in 3 sentences how fraud differs from normal
+ transactions in this data, backed by numbers.
+
+==========================================================================
+9. PHASE 3 - PREPROCESSING
+==========================================================================
+ - Combine trans_date + trans_time into one datetime (dt). Keep
+   unix_time for sorting and time gaps.
+ - Parse dob; age_at_trans = (dt - dob).days / 365.25.
+ - Sort by (cc_num, unix_time) for history features; keep a global
+   time-sorted copy for splitting.
+ - DROP (identifiers / generator metadata): ssn, first, last, street,
+   city, zip, job, acct_num, trans_num, merchant, profile. Keep cc_num
+   only as the grouping key; never as a model input.
+ - Categorical: category -> one-hot. state is OPTIONAL (default
+   excluded; with ~1000 customers it can let models memorize
+   customers). gender is excluded by default for fairness; run one
+   optional experiment to see if it changes results.
+ - Scaling: StandardScaler for logistic regression only. Trees and
+   boosting need no scaling.
+ - Build everything inside one sklearn Pipeline/ColumnTransformer per
+   model so the same steps run at training and in the web demo. Save the
+   fitted pipeline with joblib.
+
+==========================================================================
+10. PHASE 4 - FEATURE ENGINEERING
+==========================================================================
+Implement in src/fraud/features.py with unit tests. Every history
+feature may use PAST transactions of the same cc_num ONLY (strictly
+earlier unix_time).
+Base features:
+  amt, category (one-hot), city_pop, age_at_trans
+Time features:
+  hour, day_of_week, is_weekend, is_night (e.g., 22:00-05:59)
+Location features:
+  dist_home_mi = haversine(lat, long, merch_lat, merch_long)
+History features (per cc_num, sorted by unix_time):
+  secs_since_prev       = unix_time - previous unix_time
+  dist_from_prev_mi     = haversine(prev merch coords, current coords)
+  speed_mph_implied     = dist_from_prev_mi / hours since prev (cap)
+  txn_count_1h, txn_count_24h = number of earlier txns in window
+  amt_mean_past         = expanding mean of earlier amt
+  amt_ratio_to_mean     = amt / amt_mean_past
+  amt_zscore_past       = (amt - mean) / std of earlier amt
+  first_txn_flag        = 1 if no earlier transaction
+Rules for first transactions: fill history gaps with 0 or the global
+median and set first_txn_flag; document the choice.
+Leakage safeguards (test these in tests/):
+  - Use shift() before expanding/rolling stats, or rolling windows with
+    closed="left", so the current row never counts itself.
+  - Assert no feature uses any row with a later unix_time.
+  - Compute features on the full time-sorted table, THEN split by time.
+Reference sketch:
+  def haversine_mi(lat1, lon1, lat2, lon2):
+      R = 3958.8
+      p1, p2 = np.radians(lat1), np.radians(lat2)
+      dphi = p2 - p1
+      dlmb = np.radians(lon2) - np.radians(lon1)
+      a = np.sin(dphi/2)**2 + np.cos(p1)*np.cos(p2)*np.sin(dlmb/2)**2
+      return 2*R*np.arcsin(np.sqrt(a))
+  g = df.sort_values(["cc_num","unix_time"]).groupby("cc_num")
+  df["secs_since_prev"] = df["unix_time"] - g["unix_time"].shift(1)
+  df["amt_mean_past"] = g["amt"].transform(
+      lambda s: s.shift().expanding().mean())
+  # 1h / 24h counts: rolling on a datetime index with closed="left"
+DONE WHEN: feature table saved to data/processed/features.parquet;
+ tests pass; a feature dictionary (name, definition, window) is written
+ to docs/DATA_DICTIONARY.md.
+
+==========================================================================
+11. PHASE 5 - SPLIT, MODELS, TUNING, EVALUATION
+==========================================================================
+SPLIT (time-based, by unix_time quantiles):
+  train = earliest 70%, validation = next 15%, test = last 15%.
+  Log the date boundaries and fraud counts in each part. The test set is
+  touched ONCE at the end.
+MODELS (all with class weighting, random_state=42):
+  1. LogisticRegression(class_weight="balanced", max_iter=2000) with
+     StandardScaler + one-hot.
+  2. DecisionTreeClassifier(class_weight="balanced"); tune max_depth in
+     {4, 6, 8, 12} and min_samples_leaf in {10, 50, 200}.
+  3. RandomForestClassifier(class_weight="balanced_subsample",
+     n_jobs=-1); tune n_estimators {200, 400}, max_depth {8, 12, None},
+     min_samples_leaf {5, 20}.
+  4. XGBClassifier(tree_method="hist", scale_pos_weight=neg/pos,
+     eval_metric="aucpr") (or LightGBM). Tune max_depth {4, 6, 8},
+     learning_rate {0.05, 0.1}, n_estimators with early stopping on the
+     validation set, subsample/colsample {0.8, 1.0}.
+TUNING: choose hyperparameters by validation PR-AUC (average
+ precision). Use a 10-20% subsample of train for the search if runtime is
+ long, then refit on full train. Keep search small (under ~20 min total).
+THRESHOLD: for each model pick the probability threshold that maximizes
+ F1 on the validation set. Also report results at the default 0.5.
+FINAL EVALUATION on test, per model:
+  precision, recall, F1, PR-AUC (average_precision_score), ROC-AUC,
+  confusion matrix (tp, fp, fn, tn), accuracy (shown only to
+  illustrate the trap), training time, and the PR curve (downsample to
+  <= 200 points).
+EXTRAS:
+  - Feature importance: tree importance for RF/GB plus permutation
+    importance on the validation set for the best model.
+  - Per-transaction "drivers" for the web demo via occlusion: replace one
+    feature group (amount, distance, time, history) with the customer's
+    typical value and measure the change in probability (no SHAP needed).
+  - Optional: SMOTE experiment on the best model if time allows.
+DONE WHEN: a metrics table for all 4 models exists, the best model is
+ identified by validation PR-AUC (state it plainly even if it is not
+ gradient boosting), and every model is saved under models/.
+
+==========================================================================
+12. PHASE 6 - ABLATION AND SANITY CHECKS (shows effort)
+==========================================================================
+Using the best model, retrain with feature groups:
+  A) base only (amt, category, city_pop, age, time features)
+  B) A + distance
+  C) A + history
+  D) all features
+Report PR-AUC and F1 for each and the change from A. This answers "do our
+engineered features help?"
+Realism check: if distance alone is near-perfectly predictive, say so
+plainly (it is a property of how the generator places merchants) and add
+a run WITHOUT distance and without implied speed to show how the models
+do when the easy signal is removed. Put both results in the report.
+Also run: (1) shuffle-label sanity check (PR-AUC should collapse to
+about the fraud rate), (2) train-vs-test gap per model (overfitting),
+(3) results with the default 0.5 threshold vs. tuned threshold.
+
+==========================================================================
+13. PHASE 7 - EXPORT reports/results.json (single source of truth)
+==========================================================================
+Schema (extend if needed; keep keys stable because decks and the web app
+read it):
+{
+  "dataset": {"customers":int, "rows":int, "date_start":str,
+    "date_end":str, "fraud_rows":int, "fraud_rate":float,
+    "dummy_accuracy":float,
+    "split":{"train":{...},"val":{...},"test":{...}}},
+  "features": [{"name":str,"group":str,"definition":str}],
+  "models": [{"key":"logreg|tree|rf|gb","name":str,"params":{},
+     "threshold":float,
+     "test":{"precision":f,"recall":f,"f1":f,"pr_auc":f,"roc_auc":f,
+             "accuracy":f,"confusion":{"tp":i,"fp":i,"fn":i,"tn":i}},
+     "val":{"pr_auc":f,"f1":f},
+     "train_seconds":f,
+     "pr_curve":{"precision":[...],"recall":[...]}}],
+  "best_model":"key",
+  "importance":[{"feature":str,"value":float}],
+  "ablation":[{"name":str,"features":[...],"pr_auc":f,"f1":f}],
+  "eda":{"fraud_by_hour":[...],"fraud_by_category":[...],
+         "distance_hist":{"bins":[...],"fraud":[...],"normal":[...]}},
+  "generated_at":str
+}
+Also export reports/figures/*.png and a models/best_pipeline.joblib plus
+models/all_models/*.joblib for the web demo.
+DONE WHEN: a script `make export` regenerates results.json and figures
+ deterministically from raw data.
+
+==========================================================================
+14. PHASE 8 - BACKEND API (app/server.py, FastAPI)
+==========================================================================
+Endpoints:
+  GET  /api/results      -> results.json
+  GET  /api/cities?q=    -> city autocomplete (name, state, lat, long,
+                            city_pop) from the generator's public
+                            demographic_data/locations_partitions.csv
+                            (each row: cdf, then city|state|zip|lat|long|
+                            city_pop). Build a deduplicated JSON at
+                            startup.
+  POST /api/predict      -> body: home_city, merchant_city, amount,
+        category, datetime, age, plus optional recent-activity fields:
+        txn_count_1h, txn_count_24h, avg_amount, minutes_since_prev,
+        prev_city. Server builds the same feature row used in training
+        (haversine from city coordinates, hour, weekday, ratios) and
+        returns: probabilities for all 4 models, verdicts using each
+        model's threshold, distance_mi, top drivers (occlusion), and the
+        selected model key.
+  GET  /api/health
+Rules: validate inputs with pydantic; clamp absurd values; no logging of
+ user inputs beyond counters; CORS only for localhost; serve app/web as
+ static files from "/". Add tests for /api/predict (normal near-home
+ purchase scores low; far-from-home high-amount purchase scores higher).
+Verdict bands (adjust to each model's threshold): below threshold/2 =
+ "Looks normal", up to threshold = "Worth a look", at/above = "Likely
+ fraud".
+Run: uvicorn app.server:app --reload   (document in README).
+
+==========================================================================
+15. PHASE 9 - FRONT END (Apple-inspired, app/web/)
+==========================================================================
+Working title: "FraudLens" (humans may rename). Stack: plain HTML + CSS +
+vanilla JS, no build step, no frameworks, no CDN. Inline SVG for all
+icons and charts. Do NOT use Apple logos, SF Symbols files, SF Pro font
+files, or Apple product imagery; "inspired" means the design language
+only.
+
+15.1 DESIGN TOKENS (CSS variables, light and dark via
+     prefers-color-scheme, plus a manual toggle in the nav)
+  Light: --bg #fbfbfd, --alt #f5f5f7, --surface #ffffff, --text #1d1d1f,
+         --muted #6e6e73, --line rgba(0,0,0,.08), --blue #0071e3,
+         --green #34c759, --orange #ff9f0a, --red #ff3b30
+  Dark:  --bg #000000, --alt #111113, --surface #1c1c1e, --text #f5f5f7,
+         --muted #a1a1a6, --line rgba(255,255,255,.14), --blue #2997ff,
+         same status colors slightly brightened
+  Font stack: -apple-system, BlinkMacSystemFont, "SF Pro Display",
+         "SF Pro Text", "Helvetica Neue", Inter, Arial, sans-serif
+  Type: hero clamp(44px, 8vw, 88px) weight 600, letter-spacing -0.03em,
+         line-height 1.05; section titles clamp(32px, 5vw, 56px) weight
+         600; body 17px/1.47; captions 13-14px muted.
+  Shape: card radius 28px; inner controls radius 14px; buttons pill
+         (980px). Soft shadows only (0 10px 40px rgba(0,0,0,.08)).
+  Motion: cubic-bezier(.28,.11,.32,1), 300-600ms. Scroll-reveal
+         (opacity + translateY 24px) via IntersectionObserver. Gauge
+         animates on result change. Respect prefers-reduced-motion
+         (disable all non-essential animation).
+  Layout: max content width 980px (1200px for results grid); generous
+         vertical rhythm (section padding 120px desktop, 72px mobile);
+         breakpoints at 734px and 1068px.
+
+15.2 PAGE STRUCTURE
+ 1. Sticky translucent nav (48px): backdrop-filter: saturate(180%)
+    blur(20px), brand left, links (Try it, How it works, Results,
+    Limits), theme toggle right. Collapses to a compact bar on mobile.
+ 2. Hero: large two-line headline ("Spot fraud before it spends."),
+    one-line subhead (what it does, "classical ML on simulated data"),
+    two pill buttons ("Try the demo" filled blue, "See the results"
+    text link with chevron). Subtle large soft gradient orb behind the
+    headline (CSS radial gradients, very low contrast, no images).
+ 3. "Try it" - scoring studio (main feature):
+    LEFT card (form, 14px-radius inputs):
+      - Preset chips: "Coffee near home", "Gas station on a trip",
+        "Late-night electronics far away", "Burst of small purchases".
+        Selecting a chip fills the form with animated value changes.
+      - Home city (autocomplete), merchant city (autocomplete), amount
+        (number + slider), category (select), date and time, age.
+      - "Recent activity" disclosure (collapsed by default): purchases
+        in last hour, last 24h, typical amount, minutes since last
+        purchase, last purchase city.
+      - Segmented control to choose the model (Logistic regression |
+        Tree | Forest | Boosting). Default = best model from results.
+      - Primary pill button "Score transaction".
+    RIGHT card (result, aria-live="polite"):
+      - Circular gauge (SVG stroke-dashoffset) with probability as a
+        large number, status color (green/orange/red) and verdict.
+      - Distance readout: "412 miles from home".
+      - "Why" list: top 3 drivers with small +/- bars (occlusion).
+      - "All models" mini bar rows showing each model's probability and
+        its verdict.
+    Persistent disclaimer under the card: "Demo on simulated data. Not
+    for real fraud decisions."
+ 4. How it works: 4 feature cards in a grid (Location, Time, Customer
+    behavior, Movement) with custom stroke icons (1.5px, round caps),
+    one short sentence each, scroll-reveal with slight stagger.
+ 5. Results: segmented metric control (PR-AUC | F1 | Precision |
+    Recall) driving a horizontal bar chart of the 4 models (custom SVG,
+    rounded bars, values labeled, best model highlighted in blue);
+    model detail panel with confusion matrix (2x2 tiles), PR curve
+    (SVG path), and feature-importance bars; ablation chart (A-D).
+    All data from /api/results. Include an "accuracy trap" stat tile
+    using dataset.dummy_accuracy.
+ 6. Data and limits: dataset facts (rows, customers, date range, fraud
+    rate), the generator link, and a plain-language limitations list.
+ 7. Footer: team names, GitHub link, course name, disclaimer.
+15.3 QUALITY BAR
+  - Semantic HTML, labels on every input, visible :focus-visible rings
+    (2px blue, 3px offset), full keyboard operation, aria-live results,
+    contrast >= 4.5:1 in both themes.
+  - Responsive from 320px to 2560px with no horizontal scroll; touch
+    targets >= 44px.
+  - No layout shift on load; fonts are system fonts; total transfer under
+    300 KB excluding results.json.
+  - Lighthouse (local) >= 95 Performance, 100 Accessibility.
+  - Take screenshots (light + dark, desktop + mobile) into
+    reports/figures/app_*.png for the final deck and report.
+DONE WHEN: the humans can run `make app`, open http://localhost:8000,
+ score all four presets with any of the eight models, switch models and themes, and see the results
+ section populated from results.json.
+
+==========================================================================
+16. PHASE 10 - POWERPOINT DECKS
+==========================================================================
+Build decks 2 and 3 with the SAME design as deck 1, from results.json.
+Use pptxgenjs (preferred) with shared helpers in decks/design.js, or
+python-pptx if pptxgenjs is unavailable. Output files:
+  Fraud_Detection_Intermediate.pptx
+  Fraud_Detection_Final.pptx
+Each deck also gets a companion talking-points .txt (see 16.5).
+
+16.1 DESIGN SYSTEM (copy from Fraud_Detection_Proposal.pptx)
+ - Canvas 13.33 x 7.5 in (16:9 wide). Heading font Cambria bold; body
+   font Calibri. Set theme fonts and theme colors in the file so shapes
+   use scheme colors (not hard-coded hex), except chart series colors.
+ - Theme colors: dk1/ink 17252A, lt1 FFFFFF, dk2 2B7A78, lt2 E3F4F2,
+   accent1 2B7A78 (teal), accent2 E4572E (alert orange-red),
+   accent3 F2B134 (amber), accent4 3AAFA9, accent5 5C6B73 (slate),
+   accent6 9BC1BC.
+ - Layout TITLE_DARK: ink background; title placeholder x0.8 y1.8 w8.2
+   h2.6, 48pt bold white, left-aligned, bottom-anchored; subtitle
+   placeholder x0.8 y4.7 w8.2 h1.0, 20pt in lt2; decorative translucent
+   circles on the right (teal/mint, varied sizes) plus ONE solid
+   alert-colored dot (a "flagged transaction").
+ - Layout CONTENT: white background; title placeholder x0.7 y0.4 w11.9
+   h1.0, 36pt bold ink, left-aligned, vertically centered; footer text
+   at x0.7 y6.95, 10pt slate: "Credit Card Fraud Detection  |  <deck
+   name>" (deck name: "ML Project Intermediate Update" / "ML Project
+   Final Presentation"); slide number at right (x11.9 y6.95, 10pt).
+ - Titles must be 40 characters or fewer (36pt Cambria bold, 11.9in).
+ - Components: rounded-rectangle cards (radius 0.12, fill lt2, no
+   outline); icon circles (d 0.7-0.8, teal fill, white react-icons FA
+   glyph rendered to PNG with sharp, ~22% padding); pill tags (teal
+   fill, white bold 12pt); full-width "strip" cards (x0.7 w11.9 h1.3)
+   with an amber icon circle and a bold lead-in; dark stat card (ink
+   fill, 66pt amber number, white 16pt caption); numbered step rows;
+   timelines with dots (first dot = alert color); dot-grid visual.
+ - Sizes: card headers 17-22pt bold; body 14-16pt; captions >= 12pt;
+   footer 10pt. Every slide has a visual structure (cards, chart,
+   steps, timeline, stat); no text-only bullet slides; at most ~5 short
+   items per slide; no decorative lines under titles.
+ - Charts: native pptx charts (editable) in deck colors; one idea per
+   chart; direct labels; no gridline clutter; chart text >= 12pt.
+ - Name every shape (objectName) and add alt text to images.
+ - Screenshots of the web app go on a card with rounded corners.
+
+16.2 SPEAKING-NOTES RULES (same as deck 1)
+ - Speakers alternate EVERY slide: Josh on odd slides, Logan on even
+   slides. Each deck has an even number of slides so Logan closes.
+ - Notes start with the label "JOSH:" or "LOGAN:". Slide 1 note
+   introduces both. Later notes may open with a short thanks ("Thanks,
+   Logan.").
+ - Each note is 5-7 spoken sentences (about 45-70 seconds), plain
+   language, defines any term the first time, and ENDS with a handoff
+   ("Logan will explain...") except the last slide.
+ - Any external source goes on its own "Source:" line at the end.
+ - Numbers come only from results.json (format them in code, never by
+   hand). If a result is surprising, say so honestly in the note.
+ - Write notes into the .pptx notes pane and into the companion txt.
+
+16.3 DECK 2 - INTERMEDIATE (10 slides; Moodle by 11/08; present 11/10,
+     11/12). Required by the professor: Limitations; any topic/title
+     change; what was done vs. the proposal's requirements.
+  1 (Josh)  Title: "Fraud Detection: Intermediate Update" + names.
+  2 (Logan) "Where we left off": recap of problem, data, plan (3 cards).
+  3 (Josh)  "Progress against our proposal": checklist rows, each
+            proposal requirement -> status pill (Done / In progress /
+            Next) with one line of evidence (e.g., rows generated, N
+            features built, baseline F1). Required item.
+  4 (Logan) "Data: generated and validated": stat cards (rows,
+            customers, date range, fraud rate) + class-balance visual
+            + the accuracy-trap number.
+  5 (Josh)  "What the data shows": two charts (distance distribution
+            fraud vs normal; fraud by hour or category) + one takeaway.
+  6 (Logan) "Features built so far": four feature-group cards with the
+            count of features per group and the leakage safeguard strip
+            ("history features use past transactions only").
+  7 (Josh)  "Early model results": chart/table for the models finished
+            so far (at minimum logistic regression and decision tree;
+            include RF/GB if done): precision, recall, F1, PR-AUC.
+  8 (Logan) "Limitations": 4-5 cards drawn from docs/LIMITATIONS.md
+            (simulated data; generator places merchants by radius so
+            distance may be an easy signal; single home location; one
+            simulated year; demo set is not an evaluation). Required.
+  9 (Josh)  "Scope and topic: any changes": states plainly whether the
+            title/topic changed (it did not unless the humans say so);
+            lists changes since the proposal (eight models instead of
+            two; Sparkov GitHub generator; time-based split) and risks.
+ 10 (Logan) "Next steps and who does what": two person cards (Josh:
+            logistic regression, decision tree, random forest, extra trees; Logan: XGBoost, LightGBM, linear SVM, Naive Bayes,
+            each with extra duties), a "Together"
+            strip (demo, final deck, report, GitHub) with dates; closes
+            with thanks and questions. (Built; see decks/.)
+
+16.4 DECK 3 - FINAL (12 slides; Moodle by 11/22; present 11/24, 11/26).
+  Final-deck requirements were not provided; cover problem, method,
+  results, demo, limitations, conclusions, and the GitHub link. Confirm
+  with the professor if more is required.
+  1 (Josh)  Title: "Fraud Detection: Final Results" + names.
+  2 (Logan) "The problem and our goal": one-slide recap with the dot
+            grid visual (use the real fraud rate, not 1 in 100).
+  3 (Josh)  "Data and features": dataset stat cards + 4 feature groups.
+  4 (Logan) "Methods and setup": eight model cards (owner tags), time split diagram
+            (train/val/test timeline bar), class weights, tuning on
+            validation, metrics list.
+  5 (Josh)  "Model comparison": native bar chart of PR-AUC and F1 for
+            the 4 models + small table (precision, recall).
+  6 (Logan) "Best model in detail": confusion matrix tiles + PR curve
+            + threshold used + one-line interpretation (what the false
+            positives and false negatives mean in dollars/customers).
+  7 (Josh)  "What drives fraud": feature-importance bar chart.
+  8 (Logan) "Do our features help?": ablation chart (A to D) with the
+            change in PR-AUC; include the "without distance" result.
+  9 (Josh)  "Live demo": two web-app screenshots (light and dark) on
+            rounded cards + 3 callouts; speaker switches to the live
+            app (localhost) and runs two presets.
+ 10 (Logan) "Limitations and lessons learned": honest limits + 2-3
+            lessons (e.g., accuracy trap, leakage, simulated data).
+ 11 (Josh)  "Conclusions and future work": 3 findings with numbers;
+            future work (real data with permission, SMOTE, cost-based
+            thresholds, more history features).
+ 12 (Logan) "Thank you and questions": GitHub URL, team names, QR code
+            to the repo (generate locally), PLUS who did what (two person
+            cards: Josh's two models, Logan's two models, shared work);
+            closes the talk.
+
+16.5 COMPANION TALKING-POINTS FILES (one per deck)
+  Fraud_Detection_Intermediate_Talking_Points_and_QA.txt
+  Fraud_Detection_Final_Talking_Points_and_QA.txt
+  Same format as Fraud_Detection_Talking_Points_and_QA.txt:
+   PART 1 slide-by-slide script with speaker labels and handoffs;
+   PART 2 about 30 anticipated questions with answers using the real
+          results (deck 2: limitations, topic change, early results,
+          leakage, imbalance; deck 3: why this model won, ablation,
+          threshold choice, overfitting checks, simulated-data
+          validity, privacy/fairness (why gender is excluded), demo,
+          what you would do next);
+   PART 3 glossary for any NEW terms (e.g., PR curve, ablation,
+          permutation importance, threshold, hyperparameter search,
+          occlusion);
+   a short "Before you present" checklist.
+
+16.6 DECK QA (every deck, before delivering)
+  - Render to PDF, then to images; inspect every slide for overflow,
+    overlap, tiny text, and empty space. Fix and re-render.
+  - Validate the .pptx opens; confirm notes exist on every slide.
+  - Check that every number on slides/notes matches results.json.
+  - Check alternate speakers (J, L, J, L...) and that Logan closes.
+
+==========================================================================
+17. PHASE 11 - FINAL REPORT (Moodle by 12/06)
+==========================================================================
+Write reports/final_report.md, export to the format the course requires
+(see Section 20; default PDF plus .docx). Outline:
+  1 Introduction (problem, why it matters, goals)
+  2 Related work (sharmasapna's Sparkov project, other fraud-detection
+    work; cite properly; link sources)
+  3 Data (generator, columns, size, fraud rate, preprocessing)
+  4 Methods (features with formulas, split, eight models, imbalance,
+    tuning, metrics)
+  5 Experiments and results (tables, curves, confusion matrices)
+  6 Ablation and sanity checks
+  7 Demo application (architecture, screenshots)
+  8 Limitations and ethics (simulated data; privacy; fairness choices)
+  9 Conclusion and future work
+ 10 References, plus an appendix with hyperparameters and runtime.
+Rules: every number traceable to results.json; figures have captions;
+state clearly what worked, what did not, and why.
+
+==========================================================================
+18. PHASE 12 - GITHUB REPOSITORY (5% of the grade)
+==========================================================================
+ - README.md: one-paragraph summary, results table, screenshot of the
+   web app, quickstart (5 commands), data generation instructions,
+   repo map, team names, course, license, links to the deck(s).
+ - `make data features train export app` must reproduce everything from
+   scratch with seeds fixed; document expected runtime.
+ - Commit small and often with clear messages; add a data sample, not
+   the full data; add tests and run them (pytest) before the final
+   commit.
+ - Add docs/LIMITATIONS.md and docs/DATA_DICTIONARY.md.
+ - Credit the Sparkov generator (MIT) and any other sources.
+ - Prepare the exact git commands for the humans to run (init, remote
+   add, push). Do not push yourself.
+
+==========================================================================
+19. SCHEDULE (work backward from the deadlines)
+==========================================================================
+ 10/20-10/25  Phases 1-3: generate data, validate, explore, preprocess.
+ 10/26-11/01  Phase 4-5a: features, split, logistic regression and
+              decision tree baselines.
+ 11/02-11/07  Build deck 2 and its talking points; QA; submit 11/08.
+              (Tell the professor about any topic/title change.)
+ 11/08-11/12  Present intermediate; finish random forest and boosting.
+ 11/13-11/19  Tuning, ablation, sanity checks, results.json, web app
+              backend and front end.
+ 11/20-11/21  Build deck 3 from results.json; screenshots; QA; submit
+              11/22.
+ 11/22-11/26  Rehearse with the notes; final presentations.
+ 11/27-12/05  Final report, repo cleanup, README, tests; submit 12/06.
+Check schedule slippage weekly; if behind, cut in this order: SMOTE,
+optional gender/state experiments, extra tuning, PR-curve panel in the
+web app. Do not cut: time split, leakage tests, limitations, ablation.
+
+==========================================================================
+20. QUESTIONS ONLY THE HUMANS CAN ANSWER (ask; do not assume)
+==========================================================================
+ - Required format of the final report (PDF, Word, other) and length.
+ - Whether the professor has a specific structure for the final deck.
+ - Whether the final presentation dates are correct (11/26 is the
+   Thanksgiving holiday in the US).
+ - Whether to rename the web app and whether it must be hosted online
+   (default: runs locally for the presentation).
+ - Who runs the live demo and who presents which slides if the
+   alternating plan changes.
+ - Whether any title/topic change is wanted (must be told to the
+   professor before or during the intermediate presentation).
+
+==========================================================================
+21. FINAL ACCEPTANCE CHECKLIST
+==========================================================================
+ [ ] Data generated with the GitHub tool; real fraud rate recorded.
+ [ ] Time-based split; leakage tests pass.
+ [ ] Eight models tuned with time-aware CV; test evaluated once.
+ [ ] Metrics: precision, recall, F1 and PR-AUC (CV per fold and test), confusion matrices.
+ [ ] Ablation and sanity checks done; limitations documented honestly.
+ [ ] results.json drives decks, web app, and report.
+ [ ] Web app: Apple-inspired, responsive, accessible, light/dark, demo
+     presets work, disclaimer visible.
+ [ ] Decks 2 and 3 match deck 1 design; alternating notes; Logan closes.
+ [ ] Talking-points txt for decks 2 and 3 (script, Q&A, glossary).
+ [ ] Final report exported; repo README and tests complete.
+ [ ] No Kaggle data, no deep learning, no real personal data.
+
+==========================================================================
+22. FINAL-STAGE UPDATE (Nov 22): CHANGES FROM PROFESSOR FEEDBACK
+==========================================================================
+Added to the code (src/fraud/, all run by run_all.py):
+ - validity.py: checks that the generated Sparkov data behaves as the
+   generator's fraud profiles say (one fraud burst per customer, larger
+   amounts, night-time shopping, category mix, no distance difference) and
+   shows why the monthly fraud rate drifts (fraud per day is flat; normal
+   volume per day jumps in the holiday weeks). Writes reports/sparkov_validity.json.
+ - figures.py: precision-recall curves for all eight models on the test
+   month (reports/figures/pr_curves.png).
+ - boosting_probe.py: validation-fold check of why XGBoost does not beat the
+   random forest (bigger boosted models overfit; effect of dropping the
+   customer-identifying columns city size and age). Writes reports/boosting_probe.json.
+ - common.py: GRIDS widened for every model. Boosted models use a coarse grid
+   and then finer grids around the previous winner, because the best values sat
+   at the edge of the previous grid. make_model() now lets any grid value
+   override its default (including scale_pos_weight, trees, sampling).
+   combos() expands a grid or a list of grids. All winners are chosen by mean
+   PR-AUC across the five time-aware folds; the test month is never used for tuning.
+
+Final deck (decks/build_final.js) now has 20 slides, still alternating Josh and Logan, Logan closing:
+  1 Title (Josh) | 2 Problem (Logan) | 3 Data and features (Josh)
+  4 Is the simulated data believable? (Logan) | 5 History features and why they cannot leak (Josh)
+  6 SVD (Logan) | 7 t-SNE and SVD in the models (Josh) | 8 Eight models and losses (Logan)
+  9 Handling the class imbalance (Josh) | 10 Time-aware cross-validation (Logan)
+  11 Hyperparameter tuning (Josh) | 12 Model comparison (Logan)
+  13 Why XGBoost is not the winner (Josh) | 14 Precision-recall curves, all models (Logan)
+  15 Best model in detail (Josh) | 16 What drives fraud (Logan) | 17 Do our features help? (Josh)
+  18 Live demo (Logan) | 19 Limitations and conclusions (Josh) | 20 Who did what (Logan)
+The notes txt gets matching Q&A and definitions (history and leakage, Sparkov
+validity, class imbalance, PR curve, grid search, XGBoost vs forest, PCA, binary
+classification). The Proposal and Intermediate decks and notes are unchanged.
+
+Report (reports/make_report.py): new sections 3.1 (is the simulated data
+believable), history features and leakage, class imbalance, hyperparameter
+tuning table, PR-curve figure.

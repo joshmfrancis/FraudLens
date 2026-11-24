@@ -1,0 +1,294 @@
+{
+ "customers": 998,
+ "customers_with_fraud": 984,
+ "fraud_rows_per_customer": {
+  "mean": 9.529471544715447,
+  "min": 2,
+  "max": 16
+ },
+ "fraud_days_per_customer": {
+  "mean": 1.9725609756097562,
+  "max": 2,
+  "share_exactly_1": 0.027439024390243903
+ },
+ "normal_txn_per_active_day": 3.3019317239437904,
+ "fraud_txn_per_fraud_day": 4.83101494075219,
+ "category_share": {
+  "shopping_net": {
+   "fraud": 0.2356,
+   "normal": 0.0722
+  },
+  "grocery_pos": {
+   "fraud": 0.2307,
+   "normal": 0.0931
+  },
+  "misc_net": {
+   "fraud": 0.1312,
+   "normal": 0.0452
+  },
+  "shopping_pos": {
+   "fraud": 0.1233,
+   "normal": 0.099
+  },
+  "gas_transport": {
+   "fraud": 0.0825,
+   "normal": 0.0879
+  },
+  "misc_pos": {
+   "fraud": 0.028,
+   "normal": 0.0663
+  },
+  "entertainment": {
+   "fraud": 0.0271,
+   "normal": 0.0736
+  },
+  "personal_care": {
+   "fraud": 0.0254,
+   "normal": 0.07
+  },
+  "home": {
+   "fraud": 0.0248,
+   "normal": 0.0936
+  },
+  "food_dining": {
+   "fraud": 0.0235,
+   "normal": 0.0754
+  },
+  "kids_pets": {
+   "fraud": 0.0223,
+   "normal": 0.0871
+  },
+  "grocery_net": {
+   "fraud": 0.0157,
+   "normal": 0.0422
+  },
+  "health_fitness": {
+   "fraud": 0.0154,
+   "normal": 0.0622
+  },
+  "travel": {
+   "fraud": 0.0146,
+   "normal": 0.0323
+  }
+ },
+ "median_amt_by_category": {
+  "entertainment": {
+   "fraud": 567.39,
+   "normal": 31.43
+  },
+  "food_dining": {
+   "fraud": 219.19,
+   "normal": 32.73
+  },
+  "gas_transport": {
+   "fraud": 275.06,
+   "normal": 58.58
+  },
+  "grocery_net": {
+   "fraud": 262.75,
+   "normal": 62.99
+  },
+  "grocery_pos": {
+   "fraud": 300.34,
+   "normal": 60.82
+  },
+  "health_fitness": {
+   "fraud": 21.98,
+   "normal": 31.26
+  },
+  "home": {
+   "fraud": 210.78,
+   "normal": 33.38
+  },
+  "kids_pets": {
+   "fraud": 22.18,
+   "normal": 33.24
+  },
+  "misc_net": {
+   "fraud": 805.44,
+   "normal": 56.94
+  },
+  "misc_pos": {
+   "fraud": 736.64,
+   "normal": 44.64
+  },
+  "personal_care": {
+   "fraud": 140.33,
+   "normal": 34.01
+  },
+  "shopping_net": {
+   "fraud": 912.69,
+   "normal": 32.05
+  },
+  "shopping_pos": {
+   "fraud": 875.92,
+   "normal": 33.62
+  },
+  "travel": {
+   "fraud": 781.21,
+   "normal": 31.87
+  }
+ },
+ "median_amt": {
+  "fraud": 500.03,
+  "normal": 43.56
+ },
+ "small_amt_share_lt15": {
+  "fraud": 0.13767729551029115,
+  "normal": 0.317568595102259
+ },
+ "hour_share": {
+  "fraud": [
+   0.0918,
+   0.0894,
+   0.0857,
+   0.0927,
+   0.0067,
+   0.0091,
+   0.0084,
+   0.0071,
+   0.0064,
+   0.0069,
+   0.0068,
+   0.0079,
+   0.0112,
+   0.0094,
+   0.0086,
+   0.0118,
+   0.0113,
+   0.0082,
+   0.0107,
+   0.0094,
+   0.008,
+   0.0094,
+   0.2405,
+   0.2425
+  ],
+  "normal": [
+   0.0319,
+   0.0322,
+   0.0323,
+   0.0319,
+   0.0321,
+   0.032,
+   0.032,
+   0.0323,
+   0.0319,
+   0.0322,
+   0.0322,
+   0.032,
+   0.0514,
+   0.0515,
+   0.051,
+   0.0515,
+   0.0508,
+   0.0511,
+   0.0514,
+   0.0514,
+   0.0509,
+   0.0513,
+   0.0515,
+   0.0513
+  ]
+ },
+ "night_share": {
+  "fraud": 0.8583768795990189,
+  "normal": 0.2951951170056867
+ },
+ "distance_mi": {
+  "fraud_median": 49.07158179418953,
+  "normal_median": 48.93859045917381,
+  "fraud_mean": 47.581326131842594,
+  "normal_mean": 47.56571745861532,
+  "share_over_200": {
+   "fraud": 0.0,
+   "normal": 0.0
+  }
+ },
+ "monthly": {
+  "2025-01": {
+   "rows": 49833,
+   "fraud": 781,
+   "fraud_rate": 0.01567,
+   "normal_per_day": 1582.32258,
+   "fraud_per_day": 25.19355
+  },
+  "2025-02": {
+   "rows": 45827,
+   "fraud": 745,
+   "fraud_rate": 0.01626,
+   "normal_per_day": 1610.07143,
+   "fraud_per_day": 26.60714
+  },
+  "2025-03": {
+   "rows": 67677,
+   "fraud": 769,
+   "fraud_rate": 0.01136,
+   "normal_per_day": 2158.32258,
+   "fraud_per_day": 24.80645
+  },
+  "2025-04": {
+   "rows": 64216,
+   "fraud": 785,
+   "fraud_rate": 0.01222,
+   "normal_per_day": 2114.36667,
+   "fraud_per_day": 26.16667
+  },
+  "2025-05": {
+   "rows": 72499,
+   "fraud": 793,
+   "fraud_rate": 0.01094,
+   "normal_per_day": 2313.09677,
+   "fraud_per_day": 25.58065
+  },
+  "2025-06": {
+   "rows": 80948,
+   "fraud": 769,
+   "fraud_rate": 0.0095,
+   "normal_per_day": 2672.63333,
+   "fraud_per_day": 25.63333
+  },
+  "2025-07": {
+   "rows": 81742,
+   "fraud": 802,
+   "fraud_rate": 0.00981,
+   "normal_per_day": 2610.96774,
+   "fraud_per_day": 25.87097
+  },
+  "2025-08": {
+   "rows": 86536,
+   "fraud": 878,
+   "fraud_rate": 0.01015,
+   "normal_per_day": 2763.16129,
+   "fraud_per_day": 28.32258
+  },
+  "2025-09": {
+   "rows": 63190,
+   "fraud": 805,
+   "fraud_rate": 0.01274,
+   "normal_per_day": 2079.5,
+   "fraud_per_day": 26.83333
+  },
+  "2025-10": {
+   "rows": 66694,
+   "fraud": 804,
+   "fraud_rate": 0.01206,
+   "normal_per_day": 2125.48387,
+   "fraud_per_day": 25.93548
+  },
+  "2025-11": {
+   "rows": 69211,
+   "fraud": 817,
+   "fraud_rate": 0.0118,
+   "normal_per_day": 2279.8,
+   "fraud_per_day": 27.23333
+  },
+  "2025-12": {
+   "rows": 128996,
+   "fraud": 629,
+   "fraud_rate": 0.00488,
+   "normal_per_day": 4140.87097,
+   "fraud_per_day": 20.29032
+  }
+ }
+}
