@@ -1,0 +1,5 @@
+{
+ "test_fraud_rate": 0.004954181420299986,
+ "pr_auc_real_labels": 0.762944753046024,
+ "pr_auc_shuffled_labels": 0.0026470266241592926
+}

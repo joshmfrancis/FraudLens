@@ -1,0 +1,13 @@
+# Netlify publishes the static site in website/ (the demo scores in the browser, so no server is needed).
+[build]
+  publish = "website"
+
+[[headers]]
+  for = "/models/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "/slides/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"

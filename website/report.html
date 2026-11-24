@@ -1,0 +1,741 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Final Report | FraudLens</title><meta name="description" content="Credit card fraud detection with classical machine learning. Joshua Francis and Logan Digilormo, LSU Shreveport."><style>
+:root{--bg:#fbfbfd;--alt:#f5f5f7;--surf:#fff;--text:#1d1d1f;--muted:#6e6e73;--line:rgba(0,0,0,.1);--blue:#0071e3;--green:#248a3d;--orange:#c93400;--red:#d70015;--shadow:0 10px 40px rgba(0,0,0,.08);--ease:cubic-bezier(.28,.11,.32,1)}
+[data-theme=dark]{--bg:#000;--alt:#161618;--surf:#1c1c1e;--text:#f5f5f7;--muted:#a1a1a6;--line:rgba(255,255,255,.16);--blue:#2997ff;--green:#30d158;--orange:#ff9f0a;--red:#ff453a;--shadow:0 10px 40px rgba(0,0,0,.5)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:17px/1.55 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Inter,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--blue);text-decoration:none}a:hover{text-decoration:underline}
+nav{position:sticky;top:0;z-index:10;height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 max(20px,calc(50% - 490px));background:color-mix(in srgb,var(--bg) 72%,transparent);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid var(--line);font-size:13px}
+nav b{font-size:15px}.ib{background:none;border:0;color:var(--text);font-size:18px;cursor:pointer;padding:4px 8px;border-radius:8px}
+article{max-width:820px;margin:0 auto;padding:48px 20px 96px}article h1{font-size:40px;line-height:1.1;letter-spacing:-.02em;margin:0 0 8px}
+article h1+p{color:var(--muted);margin:0 0 36px}article h2{font-size:26px;letter-spacing:-.01em;margin:52px 0 10px;padding-top:12px;border-top:1px solid var(--line)}article h3{font-size:19px;margin:28px 0 6px}
+article p{margin:12px 0}article img{max-width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+article table{border-collapse:collapse;width:100%;font-size:14.5px;margin:18px 0;display:block;overflow-x:auto}article th,article td{padding:8px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+article th{background:var(--alt);font-weight:600;white-space:nowrap}article code{background:var(--alt);padding:1px 6px;border-radius:6px;font-size:.9em}article ol,article ul{padding-left:1.4em}article em{color:var(--muted)}
+.dl{display:flex;gap:12px;flex-wrap:wrap;margin:0 0 28px}.dl a{padding:8px 16px;border:1px solid var(--line);border-radius:980px;font-size:14px;color:var(--text)}.dl a:hover{background:var(--alt);text-decoration:none}nav.tabs{gap:18px}nav.tabs .tl{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;flex:1;justify-content:center}nav.tabs .tl::-webkit-scrollbar{display:none}
+nav.tabs .tl a{white-space:nowrap;padding:6px 12px;border-radius:980px;color:var(--muted);font-size:13px}nav.tabs .tl a:hover{color:var(--text);text-decoration:none;background:var(--alt)}
+nav.tabs .tl a.on{color:var(--text);background:var(--alt);font-weight:600}@media(max-width:734px){nav.tabs b{display:none}nav.tabs .tl{justify-content:flex-start}nav.tabs .tl a{display:block!important}}</style></head><body><nav class="tabs" aria-label="Main"><b>FraudLens</b><div class="tl"><a href="index.html">Demo</a><a href="report.html" class=on aria-current=page>Final Report</a><a href="proposal.html">Proposal</a><a href="intermediate.html">Intermediate</a><a href="final.html">Final Presentation</a></div><button class="ib" id="theme" aria-label="Toggle dark mode">◐</button></nav><article><h1>Credit Card Fraud Detection with Classical Machine Learning</h1>
+<p>Joshua Francis and Logan Digilormo. Graduate Machine Learning, LSU Shreveport. </p>
+<h2>1. Introduction</h2>
+<p>We predict whether a credit card transaction is fraud (binary classification) using classical machine learning (no deep learning). Fraud is rare (1.07% of transactions in our data), so accuracy is misleading: always predicting "not fraud" scores 98.93%. We evaluate every model with both F1 (at a validation-chosen threshold) and PR-AUC (threshold-free).</p>
+<h2>2. Related work</h2>
+<p>sharmasapna's GitHub project (credit-card-fraud-detection) classifies fraud on Sparkov-generated data. We add engineered customer-history features, time-aware cross-validation, dimensionality reduction (SVD and t-SNE), an eight-model comparison, an ablation study, and a scoring web app. Data generator: Sparkov Data Generation (namebrandon, MIT license), github.com/namebrandon/Sparkov_Data_Generation.</p>
+<h2>3. Data</h2>
+<p>Generated with the public Sparkov tool (seed 42, 2025-01-01 to 2025-12-31): 877,369 transactions for 998 customers, 9,377 fraud (1.07%). The output has 26 columns (16 customer, 10 transaction). We dropped identifiers (ssn, names, street, city, zip, job, account and transaction IDs, merchant name, generator profile). No full row is repeated; the generator's seed repeats some transaction ID strings across different customers, and we do not use that column. The development period is 2025-01-01 to 2025-11-30 (745,763 rows, 1.17% fraud); the test month is 2025-11-30 to 2025-12-31 (131,606 rows, 0.50% fraud). The test set is the last 15% of rows in time order.</p>
+<h3>3.1 Is the simulated data believable?</h3>
+<p>Sparkov is a rule-based simulator, so we read how it creates fraud (the profile files and datagen_transaction.py in its repository) and checked that our data matches. Each customer gets one short burst of fraud, about a day long, drawn from a separate fraud profile in place of the normal profile: many more purchases per day, a different category mix (more online shopping, groceries, and miscellaneous online purchases), larger amounts, night-time shopping, and no travel. Normal purchases on the burst days are removed.</p>
+<table>
+<thead>
+<tr>
+<th>Check on our generated data</th>
+<th>Normal</th>
+<th>Fraud</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Customers with a fraud burst</td>
+<td>n/a</td>
+<td>984 of 998</td>
+</tr>
+<tr>
+<td>Fraud purchases per customer</td>
+<td>n/a</td>
+<td>9.5 on average (range 2 to 16)</td>
+</tr>
+<tr>
+<td>Median amount</td>
+<td>$44</td>
+<td>$500</td>
+</tr>
+<tr>
+<td>Share of purchases at night (10pm to 6am)</td>
+<td>30%</td>
+<td>86%</td>
+</tr>
+<tr>
+<td>Most common category</td>
+<td>shopping pos (10%)</td>
+<td>shopping net (24%)</td>
+</tr>
+<tr>
+<td>Median distance from home (miles)</td>
+<td>48.9</td>
+<td>49.1</td>
+</tr>
+</tbody>
+</table>
+<p>The data behaves as the generator documents, which is an internal check of the simulator. It does not show that real fraud looks like this. The fraud rate is a setting (one burst per customer), not a measurement, and published real-world card datasets are much less fraudulent (for example, the widely used ULB/Worldline credit card dataset has about 0.17% fraud, 492 of 284,807 transactions, as reported by Grover et al. 2022). We therefore use the data to compare methods under identical conditions, not to estimate real-world accuracy.</p>
+<p>The check also explains the drift in the fraud rate. Fraud per day is flat through the year, while normal volume per day jumps in December because Sparkov weights the holiday weeks (Nov 30 to Dec 31) more heavily in its profile files:</p>
+<table>
+<thead>
+<tr>
+<th>Month</th>
+<th>Transactions</th>
+<th>Fraud rate</th>
+<th>Fraud per day</th>
+<th>Normal per day</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2025-01</td>
+<td>49,833</td>
+<td>1.57%</td>
+<td>25</td>
+<td>1,582</td>
+</tr>
+<tr>
+<td>2025-02</td>
+<td>45,827</td>
+<td>1.63%</td>
+<td>27</td>
+<td>1,610</td>
+</tr>
+<tr>
+<td>2025-03</td>
+<td>67,677</td>
+<td>1.14%</td>
+<td>25</td>
+<td>2,158</td>
+</tr>
+<tr>
+<td>2025-04</td>
+<td>64,216</td>
+<td>1.22%</td>
+<td>26</td>
+<td>2,114</td>
+</tr>
+<tr>
+<td>2025-05</td>
+<td>72,499</td>
+<td>1.09%</td>
+<td>26</td>
+<td>2,313</td>
+</tr>
+<tr>
+<td>2025-06</td>
+<td>80,948</td>
+<td>0.95%</td>
+<td>26</td>
+<td>2,673</td>
+</tr>
+<tr>
+<td>2025-07</td>
+<td>81,742</td>
+<td>0.98%</td>
+<td>26</td>
+<td>2,611</td>
+</tr>
+<tr>
+<td>2025-08</td>
+<td>86,536</td>
+<td>1.01%</td>
+<td>28</td>
+<td>2,763</td>
+</tr>
+<tr>
+<td>2025-09</td>
+<td>63,190</td>
+<td>1.27%</td>
+<td>27</td>
+<td>2,080</td>
+</tr>
+<tr>
+<td>2025-10</td>
+<td>66,694</td>
+<td>1.21%</td>
+<td>26</td>
+<td>2,125</td>
+</tr>
+<tr>
+<td>2025-11</td>
+<td>69,211</td>
+<td>1.18%</td>
+<td>27</td>
+<td>2,280</td>
+</tr>
+<tr>
+<td>2025-12</td>
+<td>128,996</td>
+<td>0.49%</td>
+<td>20</td>
+<td>4,141</td>
+</tr>
+</tbody>
+</table>
+<p>The lower December fraud rate is therefore an artifact of the generator. It shifts score distributions between the development period and the test month, so a threshold chosen on the development months can be less well matched to the test month.</p>
+<h2>4. Methods</h2>
+<p><strong>Features (31 inputs).</strong> Base (amount, age, city size, 14 category columns), time (hour, weekday, weekend, night), distance (haversine miles from home to merchant), and history (time and distance since the previous purchase, implied speed, amount versus the customer's past mean and z-score, purchases in the last hour and day, first-transaction flag). History features use only earlier transactions of the same card.</p>
+<p><strong>Models and loss.</strong> Eight classical models. Josh: logistic regression, decision tree, random forest, extra trees. Logan: XGBoost (gradient boosting), LightGBM, linear SVM (probability-calibrated), Gaussian Naive Bayes. Wherever a model has a loss function, it is cross-entropy; the linear SVM trains on hinge loss and is then calibrated by minimizing log loss (Platt scaling), and Naive Bayes has no loss (maximum likelihood). All use class weighting except Naive Bayes.</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Loss or objective</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Logistic regression</td>
+<td>binary cross-entropy (log loss)</td>
+</tr>
+<tr>
+<td>Decision tree</td>
+<td>entropy split criterion (cross-entropy)</td>
+</tr>
+<tr>
+<td>Random forest</td>
+<td>entropy split criterion (cross-entropy)</td>
+</tr>
+<tr>
+<td>Extra trees</td>
+<td>entropy split criterion (cross-entropy)</td>
+</tr>
+<tr>
+<td>XGBoost (gradient boosting)</td>
+<td>binary cross-entropy (binary:logistic)</td>
+</tr>
+<tr>
+<td>LightGBM</td>
+<td>binary cross-entropy (objective=binary)</td>
+</tr>
+<tr>
+<td>Linear SVM (calibrated)</td>
+<td>hinge loss, then log-loss (Platt) probability calibration</td>
+</tr>
+<tr>
+<td>Naive Bayes</td>
+<td>maximum likelihood (no loss function)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Validation.</strong> Time-aware, expanding-window 5-fold cross-validation on the development period, split into six chronological chunks. Fold k trains on chunks 1..k and validates on chunk k+1, so models never train on the future. Hyperparameters were chosen by mean PR-AUC across folds, and each model's decision threshold maximizes F1 on the pooled out-of-fold predictions. Each model was then refit on the whole development period and evaluated once on the test month. We report F1 and PR-AUC for every fold and for the test month.</p>
+<p><strong>History features and leakage.</strong> For every purchase we describe the customer's own past: the amount compared with their typical amount so far (ratio and z-score), purchases in the last hour and day, time since the previous purchase, and implied travel speed. A feature may only use purchases that happened strictly before the one being scored. This is enforced three ways (src/fraud/features.py). Running totals are cumulative sums minus the current row, so a purchase never counts toward its own average. Counts for the last hour and day search earlier timestamps only (searchsorted). A customer's first purchase has no history and is filled with zero. The split and the cross-validation folds are also in time order, and the scalers and the SVD are fit on training data only. Leakage would make the scores look better than any deployed system could achieve.</p>
+<p><strong>Class imbalance.</strong> Fraud is 1.17% of development transactions, so always answering "not fraud" is 98.9% accurate. We keep the data imbalanced and make the models care about the rare class in four ways. (1) Class weights: logistic regression, the decision tree, random forest, extra trees, and the SVM use balanced class weights (a fraud example counts about 84 times more; the forest and extra trees recompute the weights inside each tree's sample). XGBoost and LightGBM use scale_pos_weight, which is a tuned setting (we tried 1, 3, 9, 20, 40 for XGBoost and 1, 3, 9 for LightGBM, and cross-validation picked 40 and 3; the square root of the class ratio is about 9). Naive Bayes has no weighting. (2) Metrics for rare events: PR-AUC and F1, not accuracy. (3) A tuned threshold: each model's cutoff maximizes F1 on the pooled out-of-fold predictions instead of the default 0.5. (4) Realistic evaluation: validation and test data keep the real fraud rate; only the training loss changes. We did not use resampling (SMOTE or undersampling). Weighted scores rank transactions well but are not calibrated probabilities.</p>
+<p><strong>Hyperparameter tuning.</strong> Grid search with the same time-aware folds: every combination in the grid is trained on the earlier chunks and scored on the next, and the combination with the best mean PR-AUC wins (src/fraud/cv.py; the grids are in src/fraud/common.py). The test month is never used for tuning. Our first pass tried two to four combinations per model; the final grids are larger and add the fraud weight, number of trees, and sampling settings for the boosted models. The boosted models were searched in three rounds, each finer grid centered on the previous winner, because their best values kept landing at the edge of the previous grid; we stopped after three rounds, and the last winners are still at the edge of their grid. The random forest and extra trees now use 100 trees instead of 60.</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Settings searched</th>
+<th>Combinations</th>
+<th>Winner</th>
+<th>CV PR-AUC, first pass to final</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Logistic regression</td>
+<td>C: 0.01, 0.1, 1.0, 10.0</td>
+<td>4</td>
+<td>C 0.1</td>
+<td>0.13 to 0.13</td>
+</tr>
+<tr>
+<td>Decision tree</td>
+<td>depth: 8, 12, 16; min leaf: 20, 50, 200</td>
+<td>9</td>
+<td>depth 12, min leaf 200</td>
+<td>0.46 to 0.46</td>
+</tr>
+<tr>
+<td>Random forest</td>
+<td>depth: 12, 16, 20; min leaf: 5, 10, 20</td>
+<td>9</td>
+<td>depth 16, min leaf 20</td>
+<td>0.71 to 0.72</td>
+</tr>
+<tr>
+<td>Extra trees</td>
+<td>depth: 16, 20, 24; min leaf: 5, 10, 20</td>
+<td>9</td>
+<td>depth 20, min leaf 10</td>
+<td>0.47 to 0.50</td>
+</tr>
+<tr>
+<td>XGBoost (gradient boosting)</td>
+<td>fraud weight: 1.0, 3.0, 9.0, 20.0, 40.0; depth: 4, 6, 8, 10; min child: 2, 5, 10, 20; colsample: 0.3, 0.5, 0.8; subsample: 0.5, 0.8; trees: 20, 30, 40, 50, 100</td>
+<td>150</td>
+<td>fraud weight 40.0, depth 10, min child 10, colsample 0.5, subsample 0.5, trees 30</td>
+<td>0.51 to 0.69</td>
+</tr>
+<tr>
+<td>LightGBM</td>
+<td>fraud weight: 1.0, 3.0, 9.0; leaves: 7, 15, 31, 63, 127; min child: 100, 300, 600, 1000; colsample: 0.3, 0.5, 0.8; trees: 20, 30, 45, 60, 120</td>
+<td>110</td>
+<td>fraud weight 3.0, leaves 127, min child 1000, colsample 0.5, trees 30</td>
+<td>0.46 to 0.64</td>
+</tr>
+<tr>
+<td>Linear SVM (calibrated)</td>
+<td>alpha: 1e-06, 1e-05, 0.0001, 0.001</td>
+<td>4</td>
+<td>alpha 1e-06</td>
+<td>0.40 to 0.40</td>
+</tr>
+<tr>
+<td>Naive Bayes</td>
+<td>smoothing: 1e-09, 1e-07, 1e-05, 0.001</td>
+<td>4</td>
+<td>smoothing 1e-09</td>
+<td>0.30 to 0.30</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>Chunk</th>
+<th>Dates</th>
+<th>Rows</th>
+<th>Fraud rate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>2025-01-01 to 2025-03-14</td>
+<td>124,293</td>
+<td>1.49%</td>
+</tr>
+<tr>
+<td>2</td>
+<td>2025-03-14 to 2025-05-10</td>
+<td>124,293</td>
+<td>1.17%</td>
+</tr>
+<tr>
+<td>3</td>
+<td>2025-05-10 to 2025-06-28</td>
+<td>124,293</td>
+<td>1.02%</td>
+</tr>
+<tr>
+<td>4</td>
+<td>2025-06-28 to 2025-08-13</td>
+<td>124,293</td>
+<td>0.99%</td>
+</tr>
+<tr>
+<td>5</td>
+<td>2025-08-13 to 2025-10-04</td>
+<td>124,293</td>
+<td>1.13%</td>
+</tr>
+<tr>
+<td>6</td>
+<td>2025-10-04 to 2025-11-30</td>
+<td>124,298</td>
+<td>1.22%</td>
+</tr>
+</tbody>
+</table>
+<h2>5. Cross-validation results</h2>
+<p>PR-AUC by fold:</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Fold 1</th>
+<th>Fold 2</th>
+<th>Fold 3</th>
+<th>Fold 4</th>
+<th>Fold 5</th>
+<th>Mean ± SD</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Logistic regression</td>
+<td>0.32</td>
+<td>0.22</td>
+<td>0.03</td>
+<td>0.02</td>
+<td>0.04</td>
+<td>0.13 ± 0.12</td>
+</tr>
+<tr>
+<td>Decision tree</td>
+<td>0.09</td>
+<td>0.06</td>
+<td>0.67</td>
+<td>0.68</td>
+<td>0.79</td>
+<td>0.46 ± 0.32</td>
+</tr>
+<tr>
+<td>Random forest</td>
+<td>0.73</td>
+<td>0.59</td>
+<td>0.71</td>
+<td>0.76</td>
+<td>0.82</td>
+<td>0.72 ± 0.07</td>
+</tr>
+<tr>
+<td>Extra trees</td>
+<td>0.56</td>
+<td>0.29</td>
+<td>0.53</td>
+<td>0.54</td>
+<td>0.58</td>
+<td>0.50 ± 0.10</td>
+</tr>
+<tr>
+<td>XGBoost (gradient boosting)</td>
+<td>0.71</td>
+<td>0.50</td>
+<td>0.76</td>
+<td>0.74</td>
+<td>0.76</td>
+<td>0.69 ± 0.10</td>
+</tr>
+<tr>
+<td>LightGBM</td>
+<td>0.62</td>
+<td>0.51</td>
+<td>0.70</td>
+<td>0.66</td>
+<td>0.72</td>
+<td>0.64 ± 0.07</td>
+</tr>
+<tr>
+<td>Linear SVM (calibrated)</td>
+<td>0.17</td>
+<td>0.26</td>
+<td>0.09</td>
+<td>0.59</td>
+<td>0.88</td>
+<td>0.40 ± 0.29</td>
+</tr>
+<tr>
+<td>Naive Bayes</td>
+<td>0.36</td>
+<td>0.26</td>
+<td>0.25</td>
+<td>0.30</td>
+<td>0.32</td>
+<td>0.30 ± 0.04</td>
+</tr>
+</tbody>
+</table>
+<p>F1 by fold (at each model's pooled out-of-fold threshold):</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Fold 1</th>
+<th>Fold 2</th>
+<th>Fold 3</th>
+<th>Fold 4</th>
+<th>Fold 5</th>
+<th>Mean ± SD</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Logistic regression</td>
+<td>0.50</td>
+<td>0.38</td>
+<td>0.09</td>
+<td>0.06</td>
+<td>0.07</td>
+<td>0.22 ± 0.18</td>
+</tr>
+<tr>
+<td>Decision tree</td>
+<td>0.18</td>
+<td>0.14</td>
+<td>0.68</td>
+<td>0.67</td>
+<td>0.72</td>
+<td>0.48 ± 0.26</td>
+</tr>
+<tr>
+<td>Random forest</td>
+<td>0.67</td>
+<td>0.59</td>
+<td>0.68</td>
+<td>0.70</td>
+<td>0.72</td>
+<td>0.67 ± 0.04</td>
+</tr>
+<tr>
+<td>Extra trees</td>
+<td>0.52</td>
+<td>0.29</td>
+<td>0.42</td>
+<td>0.35</td>
+<td>0.39</td>
+<td>0.39 ± 0.08</td>
+</tr>
+<tr>
+<td>XGBoost (gradient boosting)</td>
+<td>0.67</td>
+<td>0.49</td>
+<td>0.66</td>
+<td>0.65</td>
+<td>0.68</td>
+<td>0.63 ± 0.07</td>
+</tr>
+<tr>
+<td>LightGBM</td>
+<td>0.53</td>
+<td>0.47</td>
+<td>0.60</td>
+<td>0.58</td>
+<td>0.67</td>
+<td>0.57 ± 0.07</td>
+</tr>
+<tr>
+<td>Linear SVM (calibrated)</td>
+<td>0.25</td>
+<td>0.00</td>
+<td>0.06</td>
+<td>0.00</td>
+<td>0.00</td>
+<td>0.06 ± 0.10</td>
+</tr>
+<tr>
+<td>Naive Bayes</td>
+<td>0.52</td>
+<td>0.44</td>
+<td>0.45</td>
+<td>0.46</td>
+<td>0.45</td>
+<td>0.47 ± 0.03</td>
+</tr>
+</tbody>
+</table>
+<p>Early folds train on little data, and fold scores vary widely for several models. Among the strong models the random forest and LightGBM are the most stable (spread about 0.07), and the decision tree is the least (spread 0.32).</p>
+<h2>6. Test results (2025-11-30 to 2025-12-31)</h2>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Owner</th>
+<th>Precision</th>
+<th>Recall</th>
+<th>F1</th>
+<th>PR-AUC</th>
+<th>CV PR-AUC</th>
+<th>CV F1</th>
+<th>Threshold</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Logistic regression</td>
+<td>Josh</td>
+<td>0.03</td>
+<td>0.03</td>
+<td>0.03</td>
+<td>0.006</td>
+<td>0.13 ± 0.12</td>
+<td>0.22</td>
+<td>1.00</td>
+</tr>
+<tr>
+<td>Decision tree</td>
+<td>Josh</td>
+<td>0.67</td>
+<td>0.74</td>
+<td>0.70</td>
+<td>0.773</td>
+<td>0.46 ± 0.32</td>
+<td>0.48</td>
+<td>0.97</td>
+</tr>
+<tr>
+<td>Random forest</td>
+<td>Josh</td>
+<td>0.74</td>
+<td>0.68</td>
+<td>0.71</td>
+<td>0.763</td>
+<td>0.72 ± 0.07</td>
+<td>0.67</td>
+<td>0.88</td>
+</tr>
+<tr>
+<td>Extra trees</td>
+<td>Josh</td>
+<td>0.84</td>
+<td>0.28</td>
+<td>0.42</td>
+<td>0.488</td>
+<td>0.50 ± 0.10</td>
+<td>0.39</td>
+<td>0.96</td>
+</tr>
+<tr>
+<td>XGBoost (gradient boosting)</td>
+<td>Logan</td>
+<td>0.83</td>
+<td>0.60</td>
+<td>0.69</td>
+<td>0.753</td>
+<td>0.69 ± 0.10</td>
+<td>0.63</td>
+<td>0.92</td>
+</tr>
+<tr>
+<td>LightGBM</td>
+<td>Logan</td>
+<td>0.84</td>
+<td>0.64</td>
+<td>0.73</td>
+<td>0.809</td>
+<td>0.64 ± 0.07</td>
+<td>0.57</td>
+<td>0.82</td>
+</tr>
+<tr>
+<td>Linear SVM (calibrated)</td>
+<td>Logan</td>
+<td>0.00</td>
+<td>0.00</td>
+<td>0.00</td>
+<td>0.011</td>
+<td>0.40 ± 0.29</td>
+<td>0.06</td>
+<td>0.68</td>
+</tr>
+<tr>
+<td>Naive Bayes</td>
+<td>Logan</td>
+<td>0.28</td>
+<td>0.34</td>
+<td>0.31</td>
+<td>0.151</td>
+<td>0.30 ± 0.04</td>
+<td>0.47</td>
+<td>1.00</td>
+</tr>
+</tbody>
+</table>
+<p>Best model by cross-validated PR-AUC: Random forest. At its threshold it caught 443 of 652 fraud cases with 158 false alarms among 130,954 normal transactions. At the default 0.5 threshold its F1 is 0.46. After tuning, the boosted models are close to the forest on the test month: LightGBM has the highest test PR-AUC (0.809, F1 0.73), XGBoost reaches 0.753 (F1 0.69), and the decision tree 0.773. We still report the random forest as the best model because we chose by cross-validated PR-AUC (0.72 versus 0.69 for XGBoost and 0.64 for LightGBM) and did not switch after seeing the test month, which has only 652 fraud cases. In our first pass the boosted models had low F1 (XGBoost 0.30, LightGBM 0.19) because their cross-validated thresholds were too strict after the refit; the wider search fixed most of that. The linear models and extra trees remain weak.</p>
+<p><img alt="Precision-recall curves for all eight models on the test month" src="figures/pr_curves.png" /></p>
+<p>Figure: precision-recall curves on the test month. PR-AUC is the area under each curve; the dashed line is a random guess, whose precision equals the test fraud rate (0.50%).</p>
+<p>Permutation importance (test-month sample, best model; post-hoc analysis, not used for selection):
+1. amt (0.681)
+2. is_night (0.270)
+3. hour (0.155)
+4. amt_ratio (0.133)
+5. amt_mean_past (0.056)
+6. txn_24h (0.041)
+7. age (0.031)
+8. cat_grocery_pos (0.024)</p>
+<h2>7. Dimensionality reduction</h2>
+<p><strong>SVD.</strong> We scale each of the 31 inputs by its standard deviation but do not center it, then take the singular value decomposition (computed exactly from the Gram matrix). This is PCA without the centering step, so the first direction mostly captures overall level. 22 components keep 95% of the energy (PCA after centering needs 25), and the first two keep 60%. Component 1 loads on amt_mean_past (0.465), dist_home_mi (0.431), age (0.399), dist_from_prev_mi (0.339); component 2 on amt_ratio (0.441), amt (0.435), amt_z (0.408), txn_24h (-0.284). In the 2D projection fraud overlaps normal activity heavily (reports/figures/svd_2d.png).</p>
+<p><strong>t-SNE</strong> on a balanced sample of 3,000 fraud and 3,000 normal transactions (after SVD to 15 components): fraud forms local clusters; 85% of a fraud point's 10 nearest neighbors are fraud (reports/figures/tsne.png). t-SNE is used for visualization only.</p>
+<p><strong>Models on reduced inputs</strong> (test PR-AUC): SVD on the 13 continuous features only (8 components, 95% of their energy, 26 inputs in total with flags and categories kept) versus SVD on all 31 features (22 components).</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Original features</th>
+<th>SVD on continuous</th>
+<th>SVD on all features</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Logistic regression</td>
+<td>0.006</td>
+<td>0.004</td>
+<td>0.004</td>
+</tr>
+<tr>
+<td>Decision tree</td>
+<td>0.773</td>
+<td>0.600</td>
+<td>0.038</td>
+</tr>
+<tr>
+<td>Random forest</td>
+<td>0.763</td>
+<td>0.720</td>
+<td>0.011</td>
+</tr>
+<tr>
+<td>Extra trees</td>
+<td>0.488</td>
+<td>0.259</td>
+<td>0.004</td>
+</tr>
+<tr>
+<td>XGBoost (gradient boosting)</td>
+<td>0.753</td>
+<td>0.520</td>
+<td>0.004</td>
+</tr>
+<tr>
+<td>LightGBM</td>
+<td>0.809</td>
+<td>0.711</td>
+<td>0.004</td>
+</tr>
+<tr>
+<td>Linear SVM (calibrated)</td>
+<td>0.011</td>
+<td>0.011</td>
+<td>0.004</td>
+</tr>
+<tr>
+<td>Naive Bayes</td>
+<td>0.151</td>
+<td>0.004</td>
+<td>0.003</td>
+</tr>
+</tbody>
+</table>
+<p>SVD on continuous features keeps most of the performance for the random forest and LightGBM and hurts extra trees and XGBoost. SVD on all features removes it for every model; we did not isolate why. A plausible explanation is that the fraud signal sits in flags and categories that a full rotation mixes, which we have not tested.</p>
+<h2>8. Ablation</h2>
+<p>Best model (Random forest) refit on feature groups, scored on the test month (PR-AUC):</p>
+<table>
+<thead>
+<tr>
+<th>Feature set</th>
+<th>Inputs</th>
+<th>PR-AUC</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A: base + time + category</td>
+<td>21</td>
+<td>0.610</td>
+</tr>
+<tr>
+<td>B: A + distance</td>
+<td>22</td>
+<td>0.608</td>
+</tr>
+<tr>
+<td>C: A + history</td>
+<td>30</td>
+<td>0.770</td>
+</tr>
+<tr>
+<td>D: all features</td>
+<td>31</td>
+<td>0.763</td>
+</tr>
+<tr>
+<td>E: all minus distance and speed</td>
+<td>28</td>
+<td>0.783</td>
+</tr>
+</tbody>
+</table>
+<p>History features raise PR-AUC from 0.61 to 0.77. Distance does not help (0.61); its single-feature ROC-AUC is 0.50, and median distance is 49.1 miles for fraud versus 48.9 for normal transactions. As a leakage sanity check we trained the random forest on development data with the fraud labels randomly shuffled: its test PR-AUC was 0.003, no better than guessing (the test fraud rate is 0.50%), against 0.763 with the real labels.</p>
+<h2>9. Demo application</h2>
+<p>The eight saved models also run in a web app (website/ in the repository, published on Netlify). The models were exported to plain arrays and scored in the browser, and the browser scores match the Python models to within 0.00001 on 1,800 test transactions. A local FastAPI version (app/server.py) serves the same front end. The app scores hand-built scenarios, shows each model's score, explains what moved the score, and shows test and cross-validated PR-AUC and F1 for all models.</p>
+<h2>10. Limitations and ethics</h2>
+<p>Simulated data may not transfer to real spending. Distance carries no signal in this generator. The fraud rate drifts across months (1.2% in January to November versus 0.5% in the test month). Tuning grids are still modest (the boosted models' winners sat at the edge of their last grid, so a wider search might improve them further), fold scores are unstable for several models, and one test month with 652 fraud cases is a small sample. Scores from class-weighted models are not calibrated probabilities. Gender is excluded from the features to avoid demographic scoring. No private or personal data was used.</p>
+<h2>11. Conclusion and future work</h2>
+<p>The random forest was best by cross-validation (test F1 0.71, PR-AUC 0.76); customer-history features mattered most, linear models failed, and tuning brought XGBoost and LightGBM close to the forest on the test month. Future work: real data with permission, cost-based thresholds, SMOTE, wider tuning grids, interaction features for the linear models, and generator settings where travel matters.</p>
+<h2>12. References</h2>
+<p>Sparkov Data Generation (namebrandon, GitHub). sharmasapna, credit-card-fraud-detection (GitHub). scikit-learn, XGBoost, and LightGBM documentation. Grover, P., Li, Z., Xu, J., Tittelfitz, J., Cheng, A., Zablocki, J., Liu, J., and Zhou, H. (2022). Fraud Dataset Benchmark and Applications. arXiv:2208.14417 (source of the real-world fraud rates quoted in section 3.1).</p></article><script>const setTheme=t=>{document.documentElement.dataset.theme=t;try{localStorage.setItem("fl-theme",t)}catch(e){}};
+let st;try{st=localStorage.getItem("fl-theme")}catch(e){}setTheme(st||(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light"));
+document.getElementById("theme").onclick=()=>setTheme(document.documentElement.dataset.theme==="dark"?"light":"dark");</script></body></html>

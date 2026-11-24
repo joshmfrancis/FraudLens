@@ -55,7 +55,7 @@ In Command Prompt, activate with `.venv\Scripts\activate.bat` instead.
 
 Important: run `uvicorn` only after the virtual environment is activated. If you see `ModuleNotFoundError: No module named 'lightgbm'` or `xgboost`, create/activate the project venv and install the pinned requirements from the project root.
 
-Then open http://localhost:8000. If the port is busy, use `--port 8001`. Scores are model outputs on simulated data; most models use class weights, so they are not true probabilities. The model switcher offers all eight models.
+Then open http://localhost:8000 (the local version runs the saved Python models through FastAPI). If the port is busy, use `--port 8001`. Scores are model outputs on simulated data; most models use class weights, so they are not true probabilities. The model switcher offers all eight models.
 
 ## Rebuild the data, models, and results
 Activate the environment as above, then run one command (it works the same on every OS):
@@ -75,5 +75,8 @@ A full run now takes roughly 1 to 2 hours (data generation plus the wider tuning
 - The Sparkov generator uses Python multiprocessing. It was tested on Linux; if it fails on Windows, run `run_all.py` inside WSL (Windows Subsystem for Linux).
 
 ## Layout
-`run_all.py` rebuild everything | `src/fraud/` pipeline (load, make_features, features, common, cv, train, svd, dimred, dimred_continuous, validity, boosting_probe, figures) | `app/` backend and front end |
-`reports/` results.json, cv_results.json, figures, report draft (make_report.py rebuilds it) | `decks/` pptxgenjs scripts and make_notes.py that build the three decks and notes (reference only; needs Node) | `models/` trained models | `data/sample/` 5,000-row sample.
+`run_all.py` rebuild everything | `src/fraud/` pipeline (load, make_features, features, common, cv, train, svd, dimred, dimred_continuous, validity, boosting_probe, figures) | `app/` local FastAPI backend and front end, plus `export_web_models.py` |
+`reports/` results.json, cv_results.json, figures, report draft (make_report.py rebuilds it) | `models/` trained models | `data/sample/` 5,000-row sample.
+
+## Published website
+The `website/` folder at the repository root is a static copy of the demo plus the final report and the three presentations. Its demo scores in the browser (the models are exported to plain arrays by `app/export_web_models.py`, which `run_all.py` runs at the end), so any static host works. To view it locally: `cd website && python -m http.server 8080`, then open http://localhost:8080. Netlify publishes it using `netlify.toml` at the repository root.

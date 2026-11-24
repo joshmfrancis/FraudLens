@@ -1,5 +1,5 @@
 # Credit Card Fraud Detection with Classical Machine Learning
-Joshua Francis and Logan Digilormo. Graduate Machine Learning, LSU Shreveport. DRAFT: edit before submitting.
+Joshua Francis and Logan Digilormo. Graduate Machine Learning, LSU Shreveport. 
 
 ## 1. Introduction
 We predict whether a credit card transaction is fraud (binary classification) using classical machine learning (no deep learning). Fraud is rare (1.07% of transactions in our data), so accuracy is misleading: always predicting "not fraud" scores 98.93%. We evaluate every model with both F1 (at a validation-chosen threshold) and PR-AUC (threshold-free).
@@ -22,7 +22,7 @@ Sparkov is a rule-based simulator, so we read how it creates fraud (the profile 
 | Most common category | shopping pos (10%) | shopping net (24%) |
 | Median distance from home (miles) | 48.9 | 49.1 |
 
-The data behaves as the generator documents, which is an internal check of the simulator. It does not show that real fraud looks like this. The fraud rate is a setting (one burst per customer), not a measurement, and published real-world card datasets are much less fraudulent (for example, the widely used ULB/Worldline credit card dataset has about 0.17% fraud; TODO: add the reference). We therefore use the data to compare methods under identical conditions, not to estimate real-world accuracy.
+The data behaves as the generator documents, which is an internal check of the simulator. It does not show that real fraud looks like this. The fraud rate is a setting (one burst per customer), not a measurement, and published real-world card datasets are much less fraudulent (for example, the widely used ULB/Worldline credit card dataset has about 0.17% fraud, 492 of 284,807 transactions, as reported by Grover et al. 2022). We therefore use the data to compare methods under identical conditions, not to estimate real-world accuracy.
 
 The check also explains the drift in the fraud rate. Fraud per day is flat through the year, while normal volume per day jumps in December because Sparkov weights the holiday weeks (Nov 30 to Dec 31) more heavily in its profile files:
 
@@ -175,10 +175,10 @@ Best model (Random forest) refit on feature groups, scored on the test month (PR
 | D: all features | 31 | 0.763 |
 | E: all minus distance and speed | 28 | 0.783 |
 
-History features raise PR-AUC from 0.61 to 0.77. Distance does not help (0.61); its single-feature ROC-AUC is 0.50, and median distance is 49.1 miles for fraud versus 48.9 for normal transactions. TODO: add a shuffled-label check.
+History features raise PR-AUC from 0.61 to 0.77. Distance does not help (0.61); its single-feature ROC-AUC is 0.50, and median distance is 49.1 miles for fraud versus 48.9 for normal transactions. As a leakage sanity check we trained the random forest on development data with the fraud labels randomly shuffled: its test PR-AUC was 0.003, no better than guessing (the test fraud rate is 0.50%), against 0.763 with the real labels.
 
 ## 9. Demo application
-A FastAPI backend serves the eight saved models; a single-page front end (app/web/index.html) scores hand-built scenarios, shows each model's score, explains what moved the score, and shows test and cross-validated PR-AUC and F1 for all models.
+The eight saved models also run in a web app (website/ in the repository, published on Netlify). The models were exported to plain arrays and scored in the browser, and the browser scores match the Python models to within 0.00001 on 1,800 test transactions. A local FastAPI version (app/server.py) serves the same front end. The app scores hand-built scenarios, shows each model's score, explains what moved the score, and shows test and cross-validated PR-AUC and F1 for all models.
 
 ## 10. Limitations and ethics
 Simulated data may not transfer to real spending. Distance carries no signal in this generator. The fraud rate drifts across months (1.2% in January to November versus 0.5% in the test month). Tuning grids are still modest (the boosted models' winners sat at the edge of their last grid, so a wider search might improve them further), fold scores are unstable for several models, and one test month with 652 fraud cases is a small sample. Scores from class-weighted models are not calibrated probabilities. Gender is excluded from the features to avoid demographic scoring. No private or personal data was used.
@@ -187,4 +187,4 @@ Simulated data may not transfer to real spending. Distance carries no signal in 
 The random forest was best by cross-validation (test F1 0.71, PR-AUC 0.76); customer-history features mattered most, linear models failed, and tuning brought XGBoost and LightGBM close to the forest on the test month. Future work: real data with permission, cost-based thresholds, SMOTE, wider tuning grids, interaction features for the linear models, and generator settings where travel matters.
 
 ## 12. References
-Sparkov Data Generation (namebrandon, GitHub). sharmasapna, credit-card-fraud-detection (GitHub). scikit-learn, XGBoost, and LightGBM documentation. TODO: add course references.
+Sparkov Data Generation (namebrandon, GitHub). sharmasapna, credit-card-fraud-detection (GitHub). scikit-learn, XGBoost, and LightGBM documentation. Grover, P., Li, Z., Xu, J., Tittelfitz, J., Cheng, A., Zablocki, J., Liu, J., and Zhou, H. (2022). Fraud Dataset Benchmark and Applications. arXiv:2208.14417 (source of the real-world fraud rates quoted in section 3.1).

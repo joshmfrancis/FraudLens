@@ -2,7 +2,7 @@
 import json
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]; R = json.load(open(ROOT / "reports/results.json"))
-V = json.load(open(ROOT / "reports/sparkov_validity.json")); CVN = json.load(open(ROOT / "reports/cv_results.json")); FP = json.load(open(ROOT / "reports/first_pass_results.json")); FPM = {m["key"]: m for m in FP["models"]}
+SL = json.load(open(ROOT / "reports/shuffled_label_check.json")); V = json.load(open(ROOT / "reports/sparkov_validity.json")); CVN = json.load(open(ROOT / "reports/cv_results.json")); FP = json.load(open(ROOT / "reports/first_pass_results.json")); FPM = {m["key"]: m for m in FP["models"]}
 D, DR, E = R["dataset"], R["dimred"], R["eda"]; sp = D["split"]; ms = R["models"]; M = {m["key"]: m for m in ms}; best = M[R["best_model"]]; c = best["test"]["confusion"]
 f2 = lambda x: f"{x:.2f}"; f3 = lambda x: f"{x:.3f}"; p1 = lambda x: f"{x*100:.1f}%"; p2 = lambda x: f"{x*100:.2f}%"; n = lambda x: f"{x:,}"
 AB = {a["name"][0]: a for a in R["ablation"]}; sc = {m["key"]: m for m in DR["svd_continuous"]["models"]}; sa = {m["key"]: m for m in DR["svd_all_models"]["models"]}
@@ -24,7 +24,7 @@ red = "\n".join(f"| {m['name']} | {f3(m['test']['pr_auc'])} | {f3(sc[m['key']]['
 abl = "\n".join(f"| {a['name']} | {a['features']} | {f3(a['pr_auc'])} |" for a in R["ablation"])
 l1 = ", ".join(f"{a} ({b})" for a, b in DR["pc1_loadings"]); l2 = ", ".join(f"{a} ({b})" for a, b in DR["pc2_loadings"])
 md = f"""# Credit Card Fraud Detection with Classical Machine Learning
-Joshua Francis and Logan Digilormo. Graduate Machine Learning, LSU Shreveport. DRAFT: edit before submitting.
+Joshua Francis and Logan Digilormo. Graduate Machine Learning, LSU Shreveport. 
 
 ## 1. Introduction
 We predict whether a credit card transaction is fraud (binary classification) using classical machine learning (no deep learning). Fraud is rare ({p2(D['fraud_rate'])} of transactions in our data), so accuracy is misleading: always predicting "not fraud" scores {p2(D['dummy_accuracy'])}. We evaluate every model with both F1 (at a validation-chosen threshold) and PR-AUC (threshold-free).
@@ -47,7 +47,7 @@ Sparkov is a rule-based simulator, so we read how it creates fraud (the profile 
 | Most common category | {_cat(V, 'normal')[0].replace('_', ' ')} ({_cat(V, 'normal')[1]['normal']*100:.0f}%) | {_cat(V, 'fraud')[0].replace('_', ' ')} ({_cat(V, 'fraud')[1]['fraud']*100:.0f}%) |
 | Median distance from home (miles) | {V['distance_mi']['normal_median']:.1f} | {V['distance_mi']['fraud_median']:.1f} |
 
-The data behaves as the generator documents, which is an internal check of the simulator. It does not show that real fraud looks like this. The fraud rate is a setting (one burst per customer), not a measurement, and published real-world card datasets are much less fraudulent (for example, the widely used ULB/Worldline credit card dataset has about 0.17% fraud; TODO: add the reference). We therefore use the data to compare methods under identical conditions, not to estimate real-world accuracy.
+The data behaves as the generator documents, which is an internal check of the simulator. It does not show that real fraud looks like this. The fraud rate is a setting (one burst per customer), not a measurement, and published real-world card datasets are much less fraudulent (for example, the widely used ULB/Worldline credit card dataset has about 0.17% fraud, 492 of 284,807 transactions, as reported by Grover et al. 2022). We therefore use the data to compare methods under identical conditions, not to estimate real-world accuracy.
 
 The check also explains the drift in the fraud rate. Fraud per day is flat through the year, while normal volume per day jumps in December because Sparkov weights the holiday weeks (Nov 30 to Dec 31) more heavily in its profile files:
 
@@ -131,10 +131,10 @@ Best model ({best['name']}) refit on feature groups, scored on the test month (P
 |---|---|---|
 {abl}
 
-History features raise PR-AUC from {f2(AB['A']['pr_auc'])} to {f2(AB['C']['pr_auc'])}. Distance does not help ({f2(AB['B']['pr_auc'])}); its single-feature ROC-AUC is {f2(E['single_feature_roc_auc']['dist_home_mi'])}, and median distance is {E['median_dist_fraud']:.1f} miles for fraud versus {E['median_dist_normal']:.1f} for normal transactions. TODO: add a shuffled-label check.
+History features raise PR-AUC from {f2(AB['A']['pr_auc'])} to {f2(AB['C']['pr_auc'])}. Distance does not help ({f2(AB['B']['pr_auc'])}); its single-feature ROC-AUC is {f2(E['single_feature_roc_auc']['dist_home_mi'])}, and median distance is {E['median_dist_fraud']:.1f} miles for fraud versus {E['median_dist_normal']:.1f} for normal transactions. As a leakage sanity check we trained the random forest on development data with the fraud labels randomly shuffled: its test PR-AUC was {f3(SL['pr_auc_shuffled_labels'])}, no better than guessing (the test fraud rate is {SL['test_fraud_rate']*100:.2f}%), against {f3(SL['pr_auc_real_labels'])} with the real labels.
 
 ## 9. Demo application
-A FastAPI backend serves the eight saved models; a single-page front end (app/web/index.html) scores hand-built scenarios, shows each model's score, explains what moved the score, and shows test and cross-validated PR-AUC and F1 for all models.
+The eight saved models also run in a web app (website/ in the repository, published on Netlify). The models were exported to plain arrays and scored in the browser, and the browser scores match the Python models to within 0.00001 on 1,800 test transactions. A local FastAPI version (app/server.py) serves the same front end. The app scores hand-built scenarios, shows each model's score, explains what moved the score, and shows test and cross-validated PR-AUC and F1 for all models.
 
 ## 10. Limitations and ethics
 Simulated data may not transfer to real spending. Distance carries no signal in this generator. The fraud rate drifts across months ({p1(sp['dev']['fraud_rate'])} in January to November versus {p1(sp['test']['fraud_rate'])} in the test month). Tuning grids are still modest (the boosted models' winners sat at the edge of their last grid, so a wider search might improve them further), fold scores are unstable for several models, and one test month with {sp['test']['fraud']} fraud cases is a small sample. Scores from class-weighted models are not calibrated probabilities. Gender is excluded from the features to avoid demographic scoring. No private or personal data was used.
@@ -143,6 +143,6 @@ Simulated data may not transfer to real spending. Distance carries no signal in 
 The {best['name'].lower()} was best by cross-validation (test F1 {f2(best['test']['f1'])}, PR-AUC {f2(best['test']['pr_auc'])}); customer-history features mattered most, linear models failed, and tuning brought XGBoost and LightGBM close to the forest on the test month. Future work: real data with permission, cost-based thresholds, SMOTE, wider tuning grids, interaction features for the linear models, and generator settings where travel matters.
 
 ## 12. References
-Sparkov Data Generation (namebrandon, GitHub). sharmasapna, credit-card-fraud-detection (GitHub). scikit-learn, XGBoost, and LightGBM documentation. TODO: add course references.
+Sparkov Data Generation (namebrandon, GitHub). sharmasapna, credit-card-fraud-detection (GitHub). scikit-learn, XGBoost, and LightGBM documentation. Grover, P., Li, Z., Xu, J., Tittelfitz, J., Cheng, A., Zablocki, J., Liu, J., and Zhou, H. (2022). Fraud Dataset Benchmark and Applications. arXiv:2208.14417 (source of the real-world fraud rates quoted in section 3.1).
 """
 (ROOT / "reports/final_report_draft.md").write_text(md, encoding="utf-8"); print("report written", len(md))

@@ -42,9 +42,9 @@ def main():
         run([py, "datagen.py", "-n", a.customers, "-seed", 42, "-o", RAW, "01-01-2025", "12-31-2025"], cwd=GEN)
     for stale in ["reports/cv_cache", "reports/parts"]:  # cached partial results from earlier runs must not leak into a fresh run
         if (ROOT / stale).exists(): shutil.rmtree(ROOT / stale)
-    for step in ["load.py", "make_features.py", "cv.py", "train.py", "dimred.py", "dimred_continuous.py", "validity.py", "boosting_probe.py", "figures.py"]:
+    for step in ["load.py", "make_features.py", "cv.py", "train.py", "dimred.py", "dimred_continuous.py", "validity.py", "shuffled_label.py", "boosting_probe.py", "figures.py"]:
         run([py, ROOT / "src" / "fraud" / step])
-    run([py, ROOT / "app" / "make_demo_examples.py"])   # scores the four demo scenarios with the saved models
+    run([py, ROOT / "app" / "export_web_models.py"])   # refreshes website/ (models, results, cities) for the static site
     print("\nDone. Results: reports/results.json  |  Demo: uvicorn app.server:app --port 8000")
 
 if __name__ == "__main__":
