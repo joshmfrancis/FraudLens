@@ -780,3 +780,6 @@ tuning table, PR-curve figure.
 
 23. Final deck trimmed to 10 slides (11/23)
 Slides dropped from the 20-slide build: problem, data and features, SVD, t-SNE, time-aware CV, best model in detail, what drives fraud, do our features help, live demo, who did what. Their key points were folded into the remaining slides (problem/data into slide 2, CV into the tuning slide, forest confusion counts into the comparison slide, who-did-what into the last slide). decks/build_final.js still builds all 20; decks/trim_final.py removes the dropped slides (edit DROP in both files to change) and the notes are filtered in build_final.js. Order: build_final.js, then trim_final.py, then make_notes.py. Speakers alternate JOSH/LOGAN with Logan closing.
+
+24. Final Presentation Simple (11/23)
+Six-slide high-level version in Presentations/Final Presentation Simple/. Built by decks/build_final_simple.js (same theme and numbers as the full deck; run after the pipeline). Josh opens, Logan closes, who-did-what on the last slide.
